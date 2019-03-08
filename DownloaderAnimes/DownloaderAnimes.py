@@ -1,21 +1,21 @@
-import unicodedata
+from unicodedata import normalize, combining
+from re import sub
 from io import StringIO
-import json
-import os
+from json import loads, dump, load
+from os import path, mkdir, getcwd, listdir, remove
 from tkinter import *
-from tkinter import messagebox
-from tkinter import ttk
-import wget
+from tkinter import messagebox, ttk
+from wget import download
 from bs4 import BeautifulSoup
-import requests as req
+from requests import get, post, RequestException
 from threading import Thread
 from operator import itemgetter
 
 
 class Anime:
-    def __init__(self, tk, telaP, texto, nome="", url=""):
+    def __init__(self, tk, tela_p, texto, nome="", url=""):
         self.master = tk
-        self.telaP = telaP
+        self.telaP = tela_p
         self.master.minsize(width=500, height=200)
         self.master.maxsize(width=500, height=200)
         # self.master.iconbitmap(icon)
@@ -42,24 +42,24 @@ class Anime:
         self.tam = 0
         self.per = 0
         if texto == 'Atualizando...':
-            Thread(target=self.buscaPagina, args=[True]).start()
+            Thread(target=self.busca_pagina, args=[True]).start()
         elif texto == "Procurando...":
-            Thread(target=self.paginaAnime, args=[nome, url]).start()
+            Thread(target=self.pagina_anime, args=[nome, url]).start()
 
-    def buscaPagina(self, buscar=False):
-        def reqLink(u, dados):
+    def busca_pagina(self, buscar=False):
+        def req_link(u, dados):
             try:
-                resul = req.post(u, data=dados)
-            except (Exception, req.RequestException):
-                resul = reqLink(u, dados)
+                resul = post(u, data=dados)
+            except (Exception, RequestException):
+                resul = req_link(u, dados)
             return resul
 
-        if not os.path.isfile("animes/Paginas.json") or buscar:
+        if not path.isfile("animes/Paginas.json") or buscar:
             link = "http://www.superanimes.site/inc/paginator.inc.php"
             total = 99
             atual = 1
             ani = {'nome': [], 'link': []}
-            listaAnimes = []
+            lista_animes = []
             self.tam = str(total)
             self.mpb['maximum'] = self.tam
             self.speed.set('Paginas: ' + self.tam)
@@ -74,8 +74,8 @@ class Anime:
                                    '&filter_order=0&filter_rank=0&filter_status=0&filter_idade=&filter_dub=0'
                                    '&filter_size_start=0&filter_size_final=0&filter_date=0&filter_viewed=0",'
                                    '"filter_genre_add":[],"filter_genre_del":[]}'}
-                e = reqLink(link, data)
-                body = json.loads(e.content)
+                e = req_link(link, data)
+                body = loads(e.content)
                 total = body['total_page']
                 self.tam = str(total)
                 self.mpb['maximum'] = self.tam
@@ -84,21 +84,21 @@ class Anime:
                 self.mpb['value'] = atual
                 atual += 1
                 for I in range(len(body['body'])):
-                    novoAni = dict(ani)
+                    novo_ani = dict(ani)
                     b = BeautifulSoup(body['body'][I], 'html.parser')
                     a = b.find('h1', 'grid_title').find('a')
-                    novoAni['nome'] = a.text
-                    novoAni['link'] = a.get('href') if ('http' or 'https') in a.get('href') else "https:" + a.get(
+                    novo_ani['nome'] = a.text
+                    novo_ani['link'] = a.get('href') if ('http' or 'https') in a.get('href') else "https:" + a.get(
                         'href')
-                    listaAnimes.append(novoAni)
-            for I in sorted(listaAnimes, key=itemgetter('nome')):
+                    lista_animes.append(novo_ani)
+            for I in sorted(lista_animes, key=itemgetter('nome')):
                 ani['nome'].append(I['nome'])
                 ani['link'].append(I['link'])
             io = StringIO()
-            json.dump(ani, io)
-            jsonS = io.getvalue()
+            dump(ani, io)
+            json_s = io.getvalue()
             arq = open("animes/Paginas.json", 'w')
-            arq.write(jsonS)
+            arq.write(json_s)
             arq.close()
             self.telaP.voltar()
             self.master.destroy()
@@ -110,23 +110,23 @@ class Anime:
     """@staticmethod
     def transformaJson():
         dic = dict({'nome': [], 'link': []})
-        for l, j, k in os.walk("animes/"):
+        for l, j, k in walk("animes/"):
             lis = []
             for ll in k:
                 s = re.compile('([0-9]+)').findall(ll)
-                if os.path.isfile("animes/Pagina " + (s[0] if len(s) else '') + ".json"):
+                if path.isfile("animes/Pagina " + (s[0] if len(s) else '') + ".json"):
                     lis.append(int(s[0]))
             lis.sort()
             for li in lis:
-                if os.path.isfile("animes/Pagina " + str(li) + ".json"):
+                if path.isfile("animes/Pagina " + str(li) + ".json"):
                     arq = open("animes/Pagina " + str(li) + ".json", 'r')
-                    js = json.load(arq)
+                    js = load(arq)
                     dic['nome'] += js['nome']
                     dic['link'] += js['link']
                     arq.close()
-                    os.remove("animes/Pagina " + str(li) + ".json")
+                    remove("animes/Pagina " + str(li) + ".json")
         io = StringIO()
-        json.dump(dic, io)
+        dump(dic, io)
         jsonS = io.getvalue()
         arq = open("animes/Paginas.json", 'w')
         arq.write(jsonS)
@@ -135,15 +135,15 @@ class Anime:
     def todosAnimes(self, link, direcao=True):
         def reqLink(u):
             try:
-                resul = req.get(u)
-            except (Exception, req.RequestException):
+                resul = get(u)
+            except (Exception, RequestException):
                 resul = reqLink(u)
             return resul
 
         dic = dict({'nome': [], 'link': []})
         link=link if ('http' or 'https') in link else "https:"+link
         s = re.compile('([0-9]+)').findall(link)
-        if not os.path.isfile("animes/Pagina " + (s[0] if len(s) else '1') + ".json"):
+        if not path.isfile("animes/Pagina " + (s[0] if len(s) else '1') + ".json"):
             r = reqLink(link)
             b = BeautifulSoup(r.content, 'html.parser')
             print(b)
@@ -154,7 +154,7 @@ class Anime:
                 dic["nome"].append(j.img.get("title"))
                 dic["link"].append(j.get("href"))
             io = StringIO()
-            json.dump(dic, io)
+            dump(dic, io)
             jsonS = io.getvalue()
             arq = 'animes/' + self.sanitizestring(
                 b.find("select", "pageSelect").find("option", selected=True).text) + '.json'
@@ -175,7 +175,7 @@ class Anime:
     def pesquisaAnimes(self):
         def bP1(a):
             for q in range(len(a['nome'])):
-                if not os.path.isfile("animes/" + str(q + 1) + " " + self.sanitizestring(a['nome'][q]) + ".json"):
+                if not path.isfile("animes/" + str(q + 1) + " " + self.sanitizestring(a['nome'][q]) + ".json"):
                     # print(str(q + 1) + " " + a['nome'][q] + ".json")
                     thread = Thread(target=self.paginaAnime, args=[str(q + 1) + " " + a['nome'][q], a['link'][q]])
                     thread.start()
@@ -183,7 +183,7 @@ class Anime:
 
         def bP2(a):
             for i in range(len(a['nome']) - 1, 0, -1):
-                if not os.path.isfile("animes/" + str(i + 1) + " " + self.sanitizestring(a['nome'][i]) + ".json"):
+                if not path.isfile("animes/" + str(i + 1) + " " + self.sanitizestring(a['nome'][i]) + ".json"):
                     # print(str(i + 1) + " " + a['nome'][i] + ".json")
                     thread = Thread(target=self.paginaAnime, args=[str(i + 1) + " " + a['nome'][i], a['link'][i]])
                     thread.start()
@@ -191,7 +191,7 @@ class Anime:
 
         def bP3(a):
             for i in range(len(a['nome']) // 2 - 1, 0, -1):
-                if not os.path.isfile("animes/" + str(i + 1) + " " + self.sanitizestring(a['nome'][i]) + ".json"):
+                if not path.isfile("animes/" + str(i + 1) + " " + self.sanitizestring(a['nome'][i]) + ".json"):
                     # print(str(i + 1) + " " + a['nome'][i] + ".json")
                     thread = Thread(target=self.paginaAnime, args=[str(i + 1) + " " + a['nome'][i], a['link'][i]])
                     thread.start()
@@ -199,14 +199,14 @@ class Anime:
 
         def bP4(a):
             for i in range(len(a['nome']) // 2, len(a['nome'])):
-                if not os.path.isfile("animes/" + str(i + 1) + " " + self.sanitizestring(a['nome'][i]) + ".json"):
+                if not path.isfile("animes/" + str(i + 1) + " " + self.sanitizestring(a['nome'][i]) + ".json"):
                     # print(str(i + 1) + " " + a['nome'][i] + ".json")
                     thread = Thread(target=self.paginaAnime, args=[str(i + 1) + " " + a['nome'][i], a['link'][i]])
                     thread.start()
                     thread.join()
 
         abc = open("animes/Paginas.json")
-        ani = json.load(abc)
+        ani = load(abc)
         abc.close()
         self.tam = len(ani['nome'])
         self.per = 0
@@ -229,30 +229,30 @@ class Anime:
     @staticmethod
     def sanitizestring(palavra):
         # Unicode normalize transforma um caracter em seu equivalente em latin.
-        nfkd = unicodedata.normalize('NFKD', palavra)
-        palavrasemacento = u"".join([c for c in nfkd if not unicodedata.combining(c)])
+        nfkd = normalize('NFKD', palavra)
+        palavrasemacento = u"".join([c for c in nfkd if not combining(c)])
         # Usa expressão regular para retornar a palavra apenas com números, letras e espaço
-        return re.sub('[^a-zA-Z0-9 \\\]', '', palavrasemacento)
+        return sub('[^a-zA-Z0-9 \\\]', '', palavrasemacento)
 
-    def paginaAnime(self, nome, link):
-        def reqLink(u):
+    def pagina_anime(self, nome, link):
+        def req_link(u):
             try:
-                resul = req.get(u)
-            except (Exception, req.RequestException):
-                resul = reqLink(u)
+                resul = get(u)
+            except (Exception, RequestException):
+                resul = req_link(u)
             return resul
 
-        def reqLinkPost(u, info):
+        def req_link_post(u, info):
             try:
-                resul = req.post(u, data=info)
-            except (Exception, req.RequestException):
-                resul = reqLinkPost(u, info)
+                resul = post(u, data=info)
+            except (Exception, RequestException):
+                resul = req_link_post(u, info)
             return resul
 
         # try:
         dic = dict({'ep': [], 'link': []})
-        link= link if ('http' or 'https') in link else "https:"+link
-        r = reqLink(link)
+        link = link if ('http' or 'https') in link else "https:"+link
+        r = req_link(link)
         b = BeautifulSoup(r.content, 'html.parser')
         id_cat = b.find('div', attrs={"data-id-cat": True}).get("data-id-cat")
         self.name.set(nome)
@@ -267,46 +267,46 @@ class Anime:
                     'limit': 100,
                     'total_page': self.tam,
                     'order_video': 'asc'}
-            e = reqLinkPost(link, data)
-            body = json.loads(e.content)
+            e = req_link_post(link, data)
+            body = loads(e.content)
             self.tam = body['total_page']
             self.mpb['maximum'] = self.tam
             self.speed.set('Paginas: ' + str(self.tam))
             self.eta.set('Paginas Percorridas: %d' % atual)
             self.mpb['value'] = atual
             atual += 1
-            if self.tam>0:
+            if self.tam > 0:
                 for II in range(len(body['body'])):
                     bb = BeautifulSoup(body['body'][II], 'html.parser')
                     a = bb.find('div', 'epsBoxSobre').find('a')
                     dic['ep'].append(a.text)
                     dic['link'].append(
                         a.get('href') if ('http' or 'https') in a.get('href') else "https:" + a.get('href'))
-        box=b.find_all("div", 'boxBarraInfo js_dropDownBtn active')
+        box = b.find_all("div", 'boxBarraInfo js_dropDownBtn active')
         if box:
             for K in box:
-                par=K.parent
-                ova=par.find_all('div', 'epsBox')
+                par = K.parent
+                ova = par.find_all('div', 'epsBox')
                 if ova:
-                    for K in ova:
-                        dic['ep'].append("OVA: "+K.find("h3").a.text)
-                        dic['link'].append(K.find("h3").a.get("href") if ('http' or 'https') in
-                                           K.find("h3").a.get("href") else "https:" + K.find("h3").a.get("href"))
-                fil=par.find_all('div', 'epsBoxFilme')
+                    for kk in ova:
+                        dic['ep'].append("OVA: "+kk.find("h3").a.text)
+                        dic['link'].append(kk.find("h3").a.get("href") if ('http' or 'https') in
+                                           kk.find("h3").a.get("href") else "https:" + kk.find("h3").a.get("href"))
+                fil = par.find_all('div', 'epsBoxFilme')
                 if fil:
                     for L in fil:
                         dic['ep'].append("FILME: "+L.find("h4").text)
                         dic['link'].append(L.find("a").get("href") if ('http' or 'https') in L.find("a").get("href")
                                            else "https:" + L.find("a").get("href"))
         io = StringIO()
-        json.dump(dic, io)
-        jsonS = io.getvalue()
+        dump(dic, io)
+        json_s = io.getvalue()
         arq = "animes/" + self.sanitizestring(nome) + ".json"
         arq = open(arq, 'w')
-        arq.write(jsonS)
+        arq.write(json_s)
         arq.close()
         self.master.destroy()
-        self.telaP.mostraAni()
+        self.telaP.mostra_ani()
         # except (Exception, AttributeError) as exception:
         #     print(link, exception)
 
@@ -316,10 +316,10 @@ class Tela:
         self.tk = Tk()
         self.tk.geometry("600x400")
         self.tk.resizable(False, False)
-        if not os.path.isdir("animes"):
-            os.mkdir("animes")
-        if os.path.isfile("animes/Paginas.json"):
-            self.ani = json.load(open("animes/Paginas.json"))
+        if not path.isdir("animes"):
+            mkdir("animes")
+        if path.isfile("animes/Paginas.json"):
+            self.ani = load(open("animes/Paginas.json"))
         else:
             self.ani = {'nome': [], 'link': []}
         self.mylist = None
@@ -332,8 +332,8 @@ class Tela:
         self.bt4 = None
         self.btProc = None
         self.etProc = None
-        self.isVoltar = False
-        self.dir = os.getcwd()
+        self.is_voltar = False
+        self.dir = getcwd()
         self.busca = StringVar()
         self.inicia()
         self.tk.title("Anime Downloader")
@@ -364,7 +364,7 @@ class Tela:
         self.bt1 = Button(self.fra2, text="Pegar valor", command=self.li)
         self.bt2 = Button(self.fra2, text="Voltar", command=self.voltar)
         self.bt3 = Button(self.fra2, text="Baixar", command=self.baixar)
-        self.bt4 = Button(self.fra2, text="Atualizar Base", command=self.buscaP)
+        self.bt4 = Button(self.fra2, text="Atualizar Base", command=self.busca_p)
         self.bt4.pack(side=LEFT)
         self.bt1.pack(side=LEFT)
         self.fra2.pack()
@@ -380,17 +380,16 @@ class Tela:
             self.selecionado = ind
             url = self.ani['link'][ind]
             nome = str(ind + 1) + " " + Anime.sanitizestring(self.ani['nome'][ind])
-            newWindow = Toplevel(self.tk)
-            Thread(target=Anime, args=[newWindow, self, 'Procurando...', nome, url]).start()
+            new_window = Toplevel(self.tk)
+            Thread(target=Anime, args=[new_window, self, 'Procurando...', nome, url]).start()
 
-    def mostraAni(self):
-        self.ani = json.load(open("animes/" + str(self.selecionado + 1) + " "
-                                  + Anime.sanitizestring(
-            self.ani['nome'][self.selecionado]) + ".json"))
+    def mostra_ani(self):
+        self.ani = load(open("animes/" + str(self.selecionado + 1) + " " +
+                             Anime.sanitizestring(self.ani['nome'][self.selecionado]) + ".json"))
         self.atualiza("ep")
         self.bt1.forget()
         self.bt4.forget()
-        self.isVoltar=True
+        self.is_voltar = True
         self.bt2.pack(side=LEFT)
         self.bt3.pack(side=LEFT)
 
@@ -414,14 +413,14 @@ class Tela:
         else:
             self.btProc['text'] = 'Procurar'
             self.etProc['state'] = NORMAL
-            if self.isVoltar:
+            if self.is_voltar:
                 self.voltar()
             else:
                 self.atualiza('nome')
-            self.isVoltar=False
+            self.is_voltar = False
 
     def voltar(self):
-        self.ani = json.load(open("animes/Paginas.json"))
+        self.ani = load(open("animes/Paginas.json"))
         self.atualiza("nome")
         self.bt2.forget()
         self.bt3.forget()
@@ -439,12 +438,12 @@ class Tela:
             url = self.ani['link'][self.mylist.curselection()[0]]
             nome = self.ani['ep'][self.mylist.curselection()[0]]
             conjunto = {'ep': nome, 'link': url}
-            newWindow = Toplevel(self.tk)
-            Thread(target=DownloadWindow, args=[newWindow, None, conjunto]).start()
+            new_window = Toplevel(self.tk)
+            Thread(target=DownloadWindow, args=[new_window, None, conjunto]).start()
 
-    def buscaP(self):
-        newWindow = Toplevel(self.tk)
-        Thread(target=Anime, args=[newWindow, self, 'Atualizando...']).start()
+    def busca_p(self):
+        new_window = Toplevel(self.tk)
+        Thread(target=Anime, args=[new_window, self, 'Atualizando...']).start()
 
 
 class DownloadWindow:
@@ -477,33 +476,33 @@ class DownloadWindow:
         from tkinter.ttk import Progressbar
         self.mpb = Progressbar(self.master, orient="horizontal", length=300, mode="determinate")
         self.mpb.pack(pady=5)
-        Thread(target=self.downloadVideo, args=[conj['link'], True]).start()
+        Thread(target=self.download_video, args=[conj['link'], True]).start()
 
-    def testaCallback(self, current, total, width):
+    def testa_callback(self, current, total, width):
         width+1
         self.mpb['maximum'] = total
         self.mpb['value'] = current
         self.speed.set('Tamanho: %.2f Mbps' % ((total / 1024) / 1024))
         self.eta.set('Baixado: %.2lf Mbps' % ((current / 1024) / 1024))
 
-    def downloadVideo(self, link, retorno=False):
-        def reqLink(u):
+    def download_video(self, link, retorno=False):
+        def req_link(u):
             try:
-                resul = req.get(u)
-            except (Exception, req.RequestException):
-                resul = reqLink(u)
+                resul = get(u)
+            except (Exception, RequestException):
+                resul = req_link(u)
             return resul
 
-        def pegaLink(href, header):
-            s = req.get(href, allow_redirects=False, headers=header)
+        def pega_link(href, header):
+            s = get(href, allow_redirects=False, headers=header)
             return s.headers['location']
 
         try:
-            link=link if ('http' or 'https') in link else "https:"+link
-            r = reqLink(link)
+            link = link if ('http' or 'https') in link else "https:"+link
+            r = req_link(link)
             b = BeautifulSoup(r.content, 'html.parser')
-            nome=b.find("h1", itemprop='name').text.split()[-1]+'-'
-            nome+=b.find("h2", itemprop='alternativeHeadline').text
+            nome = b.find("h1", itemprop='name').text.split()[-1]+'-'
+            nome += b.find("h2", itemprop='alternativeHeadline').text
             bb = b.find("source")
             nome = nome + ".mp4"
             self.name.set(nome)
@@ -512,13 +511,13 @@ class DownloadWindow:
             }
             if bb:
                 ll = bb.get("src") if ('http' or 'https') in bb.get('src') else "https:"+bb.get('src')
-                r = req.get(ll, allow_redirects=False, headers=headers)
+                r = get(ll, allow_redirects=False, headers=headers)
                 if retorno:
                     # print(r.headers['location'])
                     # print(nome)
-                    wget.download(r.headers['location'], nome, bar=self.testaCallback)
+                    download(r.headers['location'], nome, bar=self.testa_callback)
                     """
-                    rr=req.get(r.headers['location'], stream=True)
+                    rr=get(r.headers['location'], stream=True)
                     with open(nome, 'wb') as f:
                         aaa=rr.iter_content(chunk_size=1024*1024)
                         print(len(aaa))
@@ -534,14 +533,14 @@ class DownloadWindow:
             else:
                 bb = b.find('a', title="Baixar Video")
                 if bb:
-                    r = reqLink(bb.get("href") if ('http' or 'https') in bb.get('href') else "https:"+bb.get('href'))
+                    r = req_link(bb.get("href") if ('http' or 'https') in bb.get('href') else "https:"+bb.get('href'))
                     b = BeautifulSoup(r.content, 'html.parser')
                     bb = b.find("a", "bt-download")
                     if bb:
-                        head = pegaLink(bb.get("href") if ('http' or 'https') in bb.get('href') else
-                                        "https:"+bb.get('href'), headers)
+                        head = pega_link(bb.get("href") if ('http' or 'https') in bb.get('href') else "https:" +
+                                         bb.get('href'), headers)
                         if retorno:
-                            wget.download(head, nome, bar=self.testaCallback)
+                            download(head, nome, bar=self.testa_callback)
                         else:
                             return head
             self.master.destroy()
@@ -551,8 +550,8 @@ class DownloadWindow:
 
 
 if __name__ == "__main__":
-    for i in os.listdir('./'):
+    for i in listdir('./'):
         if ".tmp" in i:
-            os.remove(i)
+            remove(i)
 
     Tela()

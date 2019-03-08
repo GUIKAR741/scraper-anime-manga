@@ -1,21 +1,20 @@
 from io import StringIO
-import json
-import PIL.Image
-import unicodedata
+from json import dump, load
+from PIL.Image import open as open_image, ANTIALIAS
+from unicodedata import normalize, combining
 from bs4 import BeautifulSoup
-import requests as req
-import os
+from requests import get, RequestException
+from os import path, walk, remove, mkdir, getcwd, rename
 from threading import Thread
 from tkinter import *
-from tkinter import messagebox
-from tkinter import ttk
-import re
+from tkinter import messagebox, ttk
+from re import sub
 
 
 class Manga:
-    def __init__(self, tk, telaP, texto, nome="", url=""):
+    def __init__(self, tk, tela_p, texto, nome="", url=""):
         self.master = tk
-        self.telaP = telaP
+        self.telaP = tela_p
         self.master.minsize(width=500, height=150)
         self.master.maxsize(width=500, height=150)
         # self.master.iconbitmap(icon)
@@ -42,35 +41,36 @@ class Manga:
         self.tam = 0
         self.per = 0
         if texto == 'Atualizando...':
-            Thread(target=self.selBusca).start()
+            Thread(target=self.sel_busca).start()
         elif texto == "Procurando...":
-            Thread(target=self.pegaCap, args=[nome, url]).start()
+            Thread(target=self.pega_cap, args=[nome, url]).start()
 
-    def buscaPag(self, link, direcao=True, maximo=0):
-        def reqLink(u):
+    def busca_pag(self, link, direcao=True, maximo=0):
+        def req_link(u):
             try:
-                resul = req.get(u)
-            except (Exception, req.RequestException):
-                resul = reqLink(u)
+                resul = get(u)
+            except (Exception, RequestException):
+                resul = req_link(u)
             return resul
 
         num = int(re.compile('([0-9]+)').findall(link)[0])
-        if not os.path.isfile("mangas/Pagina %s.json" % num):
+        if not path.isfile("mangas/Pagina %s.json" % num):
             info = {'nome': [], 'link': []}
-            r = reqLink(link)
+            r = req_link(link)
             b = BeautifulSoup(r.text, 'html.parser')
             mangas = b.find_all('div', 'bloco-manga')
             for i in mangas:
                 lin = i.find_all('a')[-1]
-                info['nome'].append(DownloadWindow.sanitizestring(lin.get("href").split('/')[-1].replace('-', ' ').title()))
+                info['nome'].append(DownloadWindow.sanitizestring(lin.get("href").split('/')[-1]
+                                                                  .replace('-', ' ').title()))
                 # info['nome'].append(DownloadWindow.sanitizestring(lin.text))
                 info['link'].append(lin.get("href"))
             io = StringIO()
-            json.dump(info, io)
-            jsonS = io.getvalue()
+            dump(info, io)
+            json_s = io.getvalue()
             arq = 'mangas/Pagina ' + str(num) + '.json'
             arq = open(arq, 'w')
-            arq.write(jsonS)
+            arq.write(json_s)
             arq.close()
         if self.per < int(self.tam):
             self.per += 1
@@ -78,19 +78,19 @@ class Manga:
         self.eta.set('Paginas Percorridas: %d' % self.per)
         link = "https://unionmangas.top/lista-mangas/a-z/%s/*"
         if direcao and num + 1 <= maximo:
-            self.buscaPag((link % (int(num) + 1)), direcao, maximo)
+            self.busca_pag((link % (int(num) + 1)), direcao, maximo)
         elif not direcao and num - 1 > 0:
-            self.buscaPag((link % (int(num) - 1)), direcao, maximo)
+            self.busca_pag((link % (int(num) - 1)), direcao, maximo)
 
-    def selBusca(self):
-        def reqLink(u):
+    def sel_busca(self):
+        def req_link(u):
             try:
-                resul = req.get(u)
-            except (Exception, req.RequestException):
-                resul = reqLink(u)
+                resul = get(u)
+            except (Exception, RequestException):
+                resul = req_link(u)
             return resul
 
-        r = reqLink("https://unionmangas.top/lista-mangas")
+        r = req_link("https://unionmangas.top/lista-mangas")
         b = BeautifulSoup(r.text, 'html.parser')
         paginacao = b.find("ul", "pagination").find_all('span', "sr-only")
         link = "https://unionmangas.top/lista-mangas/a-z/%s/*"
@@ -102,10 +102,10 @@ class Manga:
         self.speed.set('Paginas: ' + str(self.tam))
         self.eta.set('Paginas Percorridas: %d' % 0)
         meio = fim // 2
-        t = [Thread(target=self.buscaPag, args=[(link % 1), True, fim]),
-             Thread(target=self.buscaPag, args=[(link % (meio - 1)), False, fim]),
-             Thread(target=self.buscaPag, args=[(link % meio), True, fim]),
-             Thread(target=self.buscaPag, args=[(link % fim), False, fim])]
+        t = [Thread(target=self.busca_pag, args=[(link % 1), True, fim]),
+             Thread(target=self.busca_pag, args=[(link % (meio - 1)), False, fim]),
+             Thread(target=self.busca_pag, args=[(link % meio), True, fim]),
+             Thread(target=self.busca_pag, args=[(link % fim), False, fim])]
         for i in t:
             i.start()
         for i in t:
@@ -115,72 +115,73 @@ class Manga:
         self.master.destroy()
         messagebox.showinfo("Anime Downloader", "Atualização Finalizada!")
 
-    def junta(self):
+    @staticmethod
+    def junta():
         dic = dict({'nome': [], 'link': []})
-        for l, j, k in os.walk("mangas/"):
+        for l, j, k in walk("mangas/"):
             lis = []
             for ll in k:
                 s = re.compile('([0-9]+)').findall(ll)
-                if os.path.isfile("mangas/Pagina " + (s[0] if len(s) else '') + ".json"):
+                if path.isfile("mangas/Pagina " + (s[0] if len(s) else '') + ".json"):
                     lis.append(int(s[0]))
             lis.sort()
             for li in lis:
-                if os.path.isfile("mangas/Pagina " + str(li) + ".json"):
+                if path.isfile("mangas/Pagina " + str(li) + ".json"):
                     arq = open("mangas/Pagina " + str(li) + ".json", 'r')
-                    js = json.load(arq)
+                    js = load(arq)
                     dic['nome'] += js['nome']
                     dic['link'] += js['link']
                     arq.close()
-                    os.remove("mangas/Pagina " + str(li) + ".json")
+                    remove("mangas/Pagina " + str(li) + ".json")
         io = StringIO()
-        json.dump(dic, io)
-        jsonS = io.getvalue()
+        dump(dic, io)
+        json_s = io.getvalue()
         arq = open("mangas/Paginas.json", 'w')
-        arq.write(jsonS)
+        arq.write(json_s)
         arq.close()
 
-    def pegaCap(self, nome, link):
-        def reqLink(u):
+    def pega_cap(self, nome, link):
+        def req_link(u):
             try:
-                resul = req.get(u)
-            except (Exception, req.RequestException):
-                resul = reqLink(u)
+                resul = get(u)
+            except (Exception, RequestException):
+                resul = req_link(u)
             return resul
 
         info = {'cap': [], 'link': []}
-        r = reqLink(link)
+        r = req_link(link)
         b = BeautifulSoup(r.text, 'html.parser')
         cap = b.find_all('div', 'row lancamento-linha')
         for i in cap:
             info['cap'].append(i.a.text)
             info['link'].append(i.a.get("href"))
         io = StringIO()
-        json.dump(info, io)
-        jsonS = io.getvalue()
+        dump(info, io)
+        json_s = io.getvalue()
         arq = open(("mangas/%s.json" % nome), 'w')
-        arq.write(jsonS)
+        arq.write(json_s)
         arq.close()
         self.master.destroy()
-        self.telaP.mostraAni()
+        self.telaP.mostra_ani()
 
-    def criaMan(self):
+    def cria_man(self):
         abc = open("mangas/Paginas.json")
-        man = json.load(abc)
+        man = load(abc)
         abc.close()
         for i in range(len(man['nome'])):
-            self.pegaCap(str(i + 1) + " " + man['nome'][i], man['link'][i])
+            self.pega_cap(str(i + 1) + " " + man['nome'][i], man['link'][i])
 
 
 class Tela:
     def __init__(self):
-        self.nomeApp="Mangás Downloader"
+        self.nomeApp = "Mangás Downloader"
         self.tk = Tk()
         self.tk.geometry("600x500")
         self.tk.resizable(False, False)
-        if not os.path.isdir('mangas'):
-            os.mkdir('mangas')
-        if os.path.isfile("mangas/Paginas.json"):
-            self.ani = json.load(open("mangas/Paginas.json"))
+        if not path.isdir('mangas'):
+            mkdir('mangas')
+        if path.isfile("mangas/Paginas.json"):
+            self.ani = load(open("mangas/Paginas.json"))
         else:
             self.ani = {'nome': [], 'link': []}
         self.mylist = None
@@ -197,7 +198,7 @@ class Tela:
         self.btProc = None
         self.etProc = None
         self.isVoltar = False
-        self.dir = os.getcwd()
+        self.dir = getcwd()
         self.busca = StringVar()
         self.inicia()
         self.tk.title(self.nomeApp)
@@ -233,7 +234,7 @@ class Tela:
         self.bt1 = Button(self.fra2, text="Pegar valor", command=self.li)
         self.bt2 = Button(self.fra2, text="Voltar", command=self.voltar)
         self.bt3 = Button(self.fra2, text="Baixar", command=self.baixar)
-        self.bt4 = Button(self.fra2, text="Atualizar Base", command=self.buscaP)
+        self.bt4 = Button(self.fra2, text="Atualizar Base", command=self.busca_p)
         self.ren1.pack(side=LEFT)
         self.ren2.pack(side=LEFT)
         self.ren3.pack(side=LEFT)
@@ -252,17 +253,16 @@ class Tela:
             self.selecionado = ind
             url = self.ani['link'][ind]
             nome = str(ind + 1) + " " + DownloadWindow.sanitizestring(self.ani['nome'][ind])
-            newWindow = Toplevel(self.tk)
-            Thread(target=Manga, args=[newWindow, self, 'Procurando...', nome, url]).start()
+            new_window = Toplevel(self.tk)
+            Thread(target=Manga, args=[new_window, self, 'Procurando...', nome, url]).start()
 
-    def mostraAni(self):
-        self.ani = json.load(open("mangas/" + str(self.selecionado + 1) + " "
-                                  + DownloadWindow.sanitizestring(
-            self.ani['nome'][self.selecionado]) + ".json"))
+    def mostra_ani(self):
+        self.ani = load(open("mangas/" + str(self.selecionado + 1) + " " +
+                             DownloadWindow.sanitizestring(self.ani['nome'][self.selecionado]) + ".json"))
         self.atualiza("cap")
         self.bt1.forget()
         self.bt4.forget()
-        self.isVoltar=True
+        self.isVoltar = True
         self.bt2.pack(side=LEFT)
         self.bt3.pack(side=LEFT)
 
@@ -290,10 +290,10 @@ class Tela:
                 self.voltar()
             else:
                 self.atualiza('nome')
-            self.isVoltar=False
+            self.isVoltar = False
 
     def voltar(self):
-        self.ani = json.load(open("mangas/Paginas.json"))
+        self.ani = load(open("mangas/Paginas.json"))
         self.atualiza("nome")
         self.bt2.forget()
         self.bt3.forget()
@@ -309,18 +309,18 @@ class Tela:
     def baixar(self):
         if self.mylist.curselection():
             url = self.ani['link'][self.mylist.curselection()[0]]
-            newWindow = Toplevel(self.tk)
-            Thread(target=DownloadWindow, args=[newWindow, url, self.dir]).start()
+            new_window = Toplevel(self.tk)
+            Thread(target=DownloadWindow, args=[new_window, url, self.dir]).start()
 
-    def buscaP(self):
-        newWindow = Toplevel(self.tk)
-        Thread(target=Manga, args=[newWindow, self, 'Atualizando...']).start()
+    def busca_p(self):
+        new_window = Toplevel(self.tk)
+        Thread(target=Manga, args=[new_window, self, 'Atualizando...']).start()
 
     def renomear(self, esc):
         # esc = self.ren.get()
-        Thread(target=self.renomearThread, args=[esc]).start()
+        Thread(target=self.renomear_thread, args=[esc]).start()
 
-    def renomearThread(self, esc):
+    def renomear_thread(self, esc):
         if esc == 1:
             self.frenomar(self.dir)
             self.frenomar(self.dir, col=True, mensagem=0)
@@ -333,10 +333,10 @@ class Tela:
             self.frenomar(self.dir, r=False)
             # print("Renomeando...")
             # time.sleep(60)
-            self.frenomar(self.dir, r=False, mensagem=0, colocaHifen=0)
+            self.frenomar(self.dir, r=False, mensagem=0, coloca_hifen=0)
 
-    def frenomar(self, caminho, col=False, r=True, mensagem=1, colocaHifen=1):
-        for _, __, arquivo in os.walk(caminho):
+    def frenomar(self, caminho, col=False, r=True, mensagem=1, coloca_hifen=1):
+        for _, __, arquivo in walk(caminho):
             if str(_).find(caminho) != -1 and str(_).find("pycache") == -1 and str(_).find(caminho+"/mangas") == -1:
                 tam = __.__len__()
                 if tam == 0:
@@ -347,27 +347,25 @@ class Tela:
                             try:
                                 if 'Thumbs' in arq:
                                     continue
-                                im = PIL.Image.open(_ + "/" + arq)
+                                im = open_image(_ + "/" + arq)
                                 x, y = im.size
-                                if colocaHifen == 1:
-                                    im.resize((x, y), PIL.Image.ANTIALIAS).save(_ + "/-" + arq)
-                                    os.remove(_ + "/" + arq)
+                                if coloca_hifen == 1:
+                                    im.resize((x, y), ANTIALIAS).save(_ + "/-" + arq)
+                                    remove(_ + "/" + arq)
                                 else:
-                                    im.resize((x, y), PIL.Image.ANTIALIAS).save(_ + "/" + arq.replace("-", ""))
-                                    os.remove(_ + "/" + arq)
-                            except:
+                                    im.resize((x, y), ANTIALIAS).save(_ + "/" + arq.replace("-", ""))
+                                    remove(_ + "/" + arq)
+                            except (ValueError, IOError):
                                 from tkinter import messagebox
                                 messagebox.showerror("Mangás Downloader", "Erro no Arquivo:\n" + _ + "/" + arq)
                         else:
                             if not col:
                                 aa = arq.split(".")
-                                os.rename(_ + "/" + arq,
-                                          _ + "/" + self.nomei(aa[aa.__len__() - 2], col=True) +
-                                          '.' + aa[aa.__len__() - 1])
+                                rename(_ + "/" + arq, _ + "/" + self.nomei(aa[aa.__len__() - 2], col=True) + '.' +
+                                       aa[aa.__len__() - 1])
                             else:
                                 aa = arq.split(".")
-                                os.rename(_ + "/" + arq,
-                                          _ + "/" + str(i) + '.' + aa[aa.__len__() - 1])
+                                rename(_ + "/" + arq, _ + "/" + str(i) + '.' + aa[aa.__len__() - 1])
                                 i += 1
         if mensagem != 1:
             from tkinter import messagebox
@@ -381,7 +379,7 @@ class Tela:
 
 
 class DownloadWindow:
-    def __init__(self, tk, url, path):
+    def __init__(self, tk, url, pathdown):
         self.master = tk
         self.master.minsize(width=500, height=200)
         self.master.maxsize(width=500, height=200)
@@ -410,13 +408,13 @@ class DownloadWindow:
         from tkinter.ttk import Progressbar
         self.mpb = Progressbar(self.master, orient="horizontal", length=300, mode="determinate")
         self.mpb.pack(pady=5)
-        Thread(target=self.fbaixar, args=[path, url]).start()
+        Thread(target=self.fbaixar, args=[pathdown, url]).start()
 
     def fbaixar(self, caminho, url, ren=False):
         urls = url.split('/')
         self.mpb["value"] = 0
         st = self.sanitizestring(str(urls[urls.__len__() - 2]))
-        pasta = caminho + '/' + st +"_"+ urls[urls.__len__() - 1]
+        pasta = caminho + '/' + st + "_" + urls[urls.__len__() - 1]
         bb = self.reqbeau(url)
         self.criapasta(pasta)
         i = 1
@@ -447,15 +445,15 @@ class DownloadWindow:
     @staticmethod
     def sanitizestring(palavra):
         # Unicode normalize transforma um caracter em seu equivalente em latin.
-        nfkd = unicodedata.normalize('NFKD', palavra)
-        palavrasemacento = u"".join([c for c in nfkd if not unicodedata.combining(c)])
+        nfkd = normalize('NFKD', palavra)
+        palavrasemacento = u"".join([c for c in nfkd if not combining(c)])
         # Usa expressão regular para retornar a palavra apenas com números, letras e espaço
-        return re.sub("[^a-zA-Z0-9 \\\]", '', palavrasemacento)
+        return sub("[^a-zA-Z0-9 \\\]", '', palavrasemacento)
 
     @staticmethod
     def criapasta(pasta):
-        if not os.path.isdir(pasta):
-            os.mkdir(pasta)
+        if not path.isdir(pasta):
+            mkdir(pasta)
 
     @staticmethod
     def nomei(i, col=False):
@@ -466,18 +464,18 @@ class DownloadWindow:
     @staticmethod
     def reqbeau(url):
         try:
-            r = req.get(url)
+            r = get(url)
             b = BeautifulSoup(r.content, 'html.parser')
-        except (Exception, req.RequestException):
+        except (Exception, RequestException):
             b = DownloadWindow.reqbeau(url)
         return b
 
     @staticmethod
-    def baixarimg(pasta, i, n, urlImg):
-        rr = req.get(str(urlImg))
+    def baixarimg(pasta, i, n, url_img):
+        rr = get(str(url_img))
         with open(pasta + "/" + str(i) + "." + n[n.__len__() - 1], 'wb') as code:
             code.write(rr.content)
-        PIL.Image.open(pasta + "/" + str(i) + "." + n[n.__len__() - 1]).save(
+        open_image(pasta + "/" + str(i) + "." + n[n.__len__() - 1]).save(
             pasta + "/" + str(i) + "." + n[n.__len__() - 1])
 
 

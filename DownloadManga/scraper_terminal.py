@@ -1,28 +1,28 @@
-import time
-import requests as req
-import os
-import unicodedata
-import re
+from time import sleep
+from requests import get
+from os import path, mkdir, walk, remove, rename
+from unicodedata import normalize, combining
+from re import sub
 from bs4 import BeautifulSoup
-from PIL import Image
+from PIL.Image import open as open_image, ANTIALIAS
 
 
 def reqbeau(url):
-    r = req.get(url)
+    r = get(url)
     b = BeautifulSoup(r.content, 'html.parser')
     return b
 
 
 def criapasta(pasta):
-    if not os.path.isdir(pasta):
-        os.mkdir(pasta)
+    if not path.isdir(pasta):
+        mkdir(pasta)
 
 
-def baixarimg(pasta, i, n, urlImg):
-    rr = req.get(str(urlImg))
+def baixarimg(pasta, i, n, url_img):
+    rr = get(str(url_img))
     with open(pasta + "/" + str(i) + "." + n[n.__len__() - 1], 'wb') as code:
         code.write(rr.content)
-    Image.open(pasta + "/" + str(i) + "." + n[n.__len__() - 1]).save(pasta + "/" + str(i) + "." + n[n.__len__() - 1])
+    open_image(pasta + "/" + str(i) + "." + n[n.__len__() - 1]).save(pasta + "/" + str(i) + "." + n[n.__len__() - 1])
 
 
 def nomei(i, col=False):
@@ -33,10 +33,10 @@ def nomei(i, col=False):
 
 def sanitizestring(palavra):
     # Unicode normalize transforma um caracter em seu equivalente em latin.
-    nfkd = unicodedata.normalize('NFKD', palavra)
-    palavrasemacento = u"".join([c for c in nfkd if not unicodedata.combining(c)])
+    nfkd = normalize('NFKD', palavra)
+    palavrasemacento = u"".join([c for c in nfkd if not combining(c)])
     # Usa expressão regular para retornar a palavra apenas com números, letras e espaço
-    return re.sub('[^a-zA-Z0-9 \\\]', '', palavrasemacento)
+    return sub('[^a-zA-Z0-9 \\\]', '', palavrasemacento)
 
 
 def fbaixar(url, ren=False):
@@ -108,34 +108,33 @@ def baixar():
 
 
 def frenomar(col=False, r=True, t=1, m=1):
-    for _, __, arquivo in os.walk('./'):
+    for _, __, arquivo in walk('./'):
         if str(_).find("./img") != -1:
             tam = __.__len__()
             if tam == 0:
                 i = 1
                 for arq in arquivo:
                     if not r:
-                        # im = Image.open(_ + "\\" + arq)
+                        # im = open_image(_ + "\\" + arq)
                         # ima = im.copy()
-                        # os.remove(_ + "\\" + arq)
+                        # remove(_ + "\\" + arq)
                         # ima.save(_ + "\\-" + arq)
-                        im = Image.open(_ + "\\" + arq)
+                        im = open_image(_ + "\\" + arq)
                         x, y = im.size
                         if m == 1:
-                            im.resize((x, y), Image.ANTIALIAS).save(_ + "\\-" + arq)
-                            os.remove(_ + "\\" + arq)
+                            im.resize((x, y), ANTIALIAS).save(_ + "\\-" + arq)
+                            remove(_ + "\\" + arq)
                         else:
-                            im.resize((x, y), Image.ANTIALIAS).save(_ + "\\" + arq.replace("-", ""))
-                            os.remove(_ + "\\" + arq)
+                            im.resize((x, y), ANTIALIAS).save(_ + "\\" + arq.replace("-", ""))
+                            remove(_ + "\\" + arq)
                     else:
                         if not col:
                             aa = arq.split(".")
-                            os.rename(_ + "\\" + arq,
-                                      _ + "\\" + nomei(aa[aa.__len__() - 2], col=True) + '.' + aa[aa.__len__() - 1])
+                            rename(_ + "\\" + arq, _ + "\\" + nomei(aa[aa.__len__() - 2], col=True) + '.' +
+                                   aa[aa.__len__() - 1])
                         else:
                             aa = arq.split(".")
-                            os.rename(_ + "\\" + arq,
-                                      _ + "\\" + str(i) + '.' + aa[aa.__len__() - 1])
+                            rename(_ + "\\" + arq, _ + "\\" + str(i) + '.' + aa[aa.__len__() - 1])
                             i += 1
     if t != 1:
         print("Arquivos Renomeados")
@@ -160,7 +159,7 @@ def renomear():
         frenomar()
         frenomar(r=False)
         print("Renomeando...")
-        time.sleep(60)
+        sleep(60)
         frenomar(r=False, m=0, t=0)
     elif esc == 4:
         menu()
