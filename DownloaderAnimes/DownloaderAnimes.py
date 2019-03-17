@@ -1,15 +1,15 @@
-from unicodedata import normalize, combining
+from os import path, mkdir, getcwd, listdir, remove
 from re import sub
 from io import StringIO
 from json import loads, dump, load
-from os import path, mkdir, getcwd, listdir, remove
+from unicodedata import normalize, combining
 from tkinter import *
 from tkinter import messagebox, ttk
+from threading import Thread
+from operator import itemgetter
 from wget import download
 from bs4 import BeautifulSoup
 from requests import get, post, RequestException
-from threading import Thread
-from operator import itemgetter
 
 
 class Anime:
