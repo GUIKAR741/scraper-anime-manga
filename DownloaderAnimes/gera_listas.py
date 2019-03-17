@@ -1,8 +1,51 @@
 from requests import get, RequestException, post
-from bs4 import BeautifulSoup as bs
-from json import load, loads, dump
-from io import StringIO
+from bs4 import BeautifulSoup as Bs
+from json import load, loads
 from multiprocessing.dummy import Pool
+from operator import itemgetter
+
+
+def busca_pag() -> list:
+    def req_link(u, dados):
+        try:
+            resul = post(u, data=dados)
+        except (Exception, RequestException):
+            resul = req_link(u, dados)
+        return resul
+
+    link = "http://www.superanimes.site/inc/paginator.inc.php"
+    total = 99
+    atual = 1
+    ani = {'nome': [], 'link': [], 'img': []}
+    lista_animes = []
+    while atual <= total:
+        data = {'type_url': "lista",
+                'page': atual,
+                'limit': 100,
+                'total_page': total,
+                'type': 'lista',
+                'filters': '{"filter_data":"filter_display_view=grade&filter_letter=0&filter_type_content=4&'
+                           'filter_genre_model=0&filter_order=a-z&filter_rank=0&filter_status=0&'
+                           'filter_idade=&filter_dub=0&filter_size_start=0&filter_size_final=0&'
+                           'filter_date=0&filter_viewed=0","filter_genre_add":[],"filter_genre_del":[]}'}
+        e = req_link(link, data)
+        body = loads(e.content)
+        total = body['total_page']
+        atual += 1
+        for I in range(len(body['body'])):
+            novo_ani = dict(ani)
+            b = Bs(body['body'][I], 'html.parser')
+            a = b.find('h1', 'grid_title').find('a')
+            img = b.find('img').get('src')
+            novo_ani['nome'] = a.text
+            novo_ani['link'] = a.get('href') if ('http' or 'https') in a.get('href') else "https:" + a.get('href')
+            novo_ani['img'] = img
+            lista_animes.append(novo_ani)
+    # for I in sorted(lista_animes, key=itemgetter('nome')):
+    #     ani['nome'].append(I['nome'])
+    #     ani['link'].append(I['link'])
+    ani = sorted(lista_animes, key=itemgetter('nome'))
+    return ani
 
 
 def download_video(link):
@@ -17,37 +60,49 @@ def download_video(link):
         s = get(href, stream=True, allow_redirects=False, headers=header)
         return s.headers['location']
 
-    try:
-        link = link[1]
-        link = link if ('http' or 'https') in link else "https:" + link
-        r = req_link(link)
-        b = bs(r.content, 'html.parser')
-        nome = b.find("h1", itemprop='name').text.split()[-1] + '-'
-        nome += b.find("h2", itemprop='alternativeHeadline').text
-        bb = b.find("source")
-        headers = {
-            'Referer': link
-        }
-        if bb:
-            ll = bb.get("src") if ('http' or 'https') in bb.get('src') else "https:" + bb.get('src')
-            r = get(ll, stream=True, allow_redirects=False, headers=headers)
-            return nome, r.headers['location']
-        else:
-            bb = b.find('a', title="Baixar Video")
+    def down(link_):
+        try:
+            print(link_[0])
+            link_down = link_[1]
+            link_down = link_down if ('http' or 'https') in link_down else "https:" + link_down
+            r = req_link(link_down)
+            b = Bs(r.content, 'html.parser')
+            nome = b.find("h1", itemprop='name').text.split()[-1] + '-'
+            nome += b.find("h2", itemprop='alternativeHeadline').text
+            bb = b.find("source")
+            headers = {
+                'Referer': link_down
+            }
             if bb:
-                r = req_link(bb.get("href") if ('http' or 'https') in bb.get('href') else "https:" + bb.get('href'))
-                b = bs(r.content, 'html.parser')
-                bb = b.find("a", "bt-download")
+                ll = bb.get("src") if ('http' or 'https') in bb.get('src') else "https:" + bb.get('src')
+                r = get(ll, stream=True, allow_redirects=False, headers=headers)
+                return {nome: r.headers['location']}
+            else:
+                bb = b.find('a', title="Baixar Video")
                 if bb:
-                    head = pega_link(bb.get("href") if ('http' or 'https') in bb.get('href') else "https:" +
-                                                                                                  bb.get('href'),
-                                     headers)
-                    return nome, head
+                    r = req_link(bb.get("href") if ('http' or 'https') in bb.get('href') else "https:" + bb.get('href'))
+                    b = Bs(r.content, 'html.parser')
+                    bb = b.find("a", "bt-download")
+                    if bb:
+                        head = pega_link(bb.get("href") if ('http' or 'https') in bb.get('href') else "https:" +
+                                                                                                      bb.get('href'),
+                                         headers)
+                        return {nome: head}
+        except (Exception, AttributeError) as exp:
+            print("Down", link_[0], exp)
+            return down(link_)
+    try:
+        node = Pool(5)
+        espera = node.map_async(down, link['episodios'])
+        espera.wait()
+        link['episodios'] = espera.get()
+        return link
     except (Exception, AttributeError) as exp:
-        print(link, exp)
+        print("Download", link['nome'], exp)
+        return download_video(link)
 
 
-def pagina_anime(self, nome, link):
+def pagina_anime(ani: dict):
     def req_link(u):
         try:
             resul = get(u)
@@ -63,38 +118,32 @@ def pagina_anime(self, nome, link):
         return resul
 
     # try:
-    dic = dict({'ep': [], 'link': []})
+    print(ani['nome'])
+    link = ani['link']
     link = link if ('http' or 'https') in link else "https:"+link
     r = req_link(link)
-    b = bs(r.content, 'html.parser')
+    b = Bs(r.content, 'html.parser')
     id_cat = b.find('div', attrs={"data-id-cat": True}).get("data-id-cat")
-    self.name.set(nome)
     atual = 1
-    self.tam = 99
-    self.speed.set('Paginas: ' + str(self.tam))
-    self.mpb['maximum'] = self.tam
+    tam = 99
     link = "https://www.superanimes.site/inc/paginatorVideo.inc.php"
-    while atual <= self.tam:
+    ani['episodios'] = []
+    while atual <= tam:
         data = {'id_cat': id_cat,
                 'page': atual,
                 'limit': 100,
-                'total_page': self.tam,
+                'total_page': tam,
                 'order_video': 'asc'}
         e = req_link_post(link, data)
         body = loads(e.content)
-        self.tam = body['total_page']
-        self.mpb['maximum'] = self.tam
-        self.speed.set('Paginas: ' + str(self.tam))
-        self.eta.set('Paginas Percorridas: %d' % atual)
-        self.mpb['value'] = atual
+        tam = body['total_page']
         atual += 1
-        if self.tam > 0:
+        if tam > 0:
             for II in range(len(body['body'])):
-                bb = bs(body['body'][II], 'html.parser')
+                bb = Bs(body['body'][II], 'html.parser')
                 a = bb.find('div', 'epsBoxSobre').find('a')
-                dic['ep'].append(a.text)
-                dic['link'].append(
-                    a.get('href') if ('http' or 'https') in a.get('href') else "https:" + a.get('href'))
+                ani['episodios'].append((a.text, a.get('href') if ('http' or 'https') in a.get('href')
+                                         else "https:" + a.get('href')))
     box = b.find_all("div", 'boxBarraInfo js_dropDownBtn active')
     if box:
         for K in box:
@@ -102,50 +151,51 @@ def pagina_anime(self, nome, link):
             ova = par.find_all('div', 'epsBox')
             if ova:
                 for kk in ova:
-                    dic['ep'].append("OVA: "+kk.find("h3").a.text)
-                    dic['link'].append(kk.find("h3").a.get("href") if ('http' or 'https') in
-                                       kk.find("h3").a.get("href") else "https:" + kk.find("h3").a.get("href"))
+                    ani['episodios'].append((str("OVA: "+kk.find("h3").a.text), kk.find("h3").a.get("href")
+                                             if ('http' or 'https') in kk.find("h3").a.get("href")
+                                             else "https:" + kk.find("h3").a.get("href")))
             fil = par.find_all('div', 'epsBoxFilme')
             if fil:
                 for L in fil:
-                    dic['ep'].append("FILME: "+L.find("h4").text)
-                    dic['link'].append(L.find("a").get("href") if ('http' or 'https') in L.find("a").get("href")
-                                       else "https:" + L.find("a").get("href"))
-    io = StringIO()
-    dump(dic, io)
-    json_s = io.getvalue()
-    arq = "animes/" + self.sanitizestring(nome) + ".json"
-    arq = open(arq, 'w')
-    arq.write(json_s)
-    arq.close()
+                    ani['episodios'].append((str("FILME: "+L.find("h4").text), L.find("a").get("href")
+                                             if ('http' or 'https') in L.find("a").get("href")
+                                             else "https:" + L.find("a").get("href")))
+    # io = StringIO()
+    # dump(dic, io)
+    # json_s = io.getvalue()
+    # arq = "animes/" + self.sanitizestring(nome) + ".json"
+    # arq = open(arq, 'w')
+    # arq.write(json_s)
+    # arq.close()
     # except (Exception, AttributeError) as exception:
     #     print(link, exception)
+    return ani
 
 
-knd = load(open("animes/1250 KND  A Turma Do Bairro.json"))
-du = load(open("animes/664 Du Dudu E Edu.json"))
-arqknd = list((zip(knd['ep'], knd['link'])))
-arqdu = (zip(du['ep'], du['link']))
-kndimg = 'https://img.superanimes.site/img/animes/gyv7-large.jpg'
-duimg = "https://img.superanimes.site/img/animes/HtmX-large.jpg"
+def m3u(animes_parse: dict):
+    m3u = '#EXTM3U\n'
+    for i in animes_parse:
+        for j in i['episodios']:
+            if j is not None:
+                k = [*j.keys()][0]
+                m3u += '#EXTINF:-1 tvg-id="' + i['nome'] + '" tvg-name="' \
+                       + i['nome'] + '" logo="' + i['img'] + '", ' + i['nome'] + ' ' + k + '\n'
+                m3u += j[k] + "\n"
+    arq = open('listas/listaDesenho.m3u', 'w')
+    arq.write(m3u)
+    arq.close()
+
+
+print("Procurar Episodios")
+animes = busca_pag()
+print("Pegar Links")
 no = Pool(10)
-esp = no.map_async(download_video, arqknd)
+esp = no.map_async(pagina_anime, animes)
 esp.wait()
-kndep = esp.get()
-no = Pool(10)
-esp = no.map_async(download_video, arqdu)
+animes = esp.get()
+print("Alterar Links")
+no = Pool(5)
+esp = no.map_async(download_video, animes)
 esp.wait()
-duep = esp.get()
-m3u = '#EXTM3U\n'
-for i in kndep:
-    m3u += '#EXTINF:-1 tvg-id="' + i[0] + '" tvg-name="' \
-           + i[0] + '" logo="' + kndimg + '", KND - A Turma do Bairo ' + i[0] + '\n'
-    m3u += i[1] + "\n"
-for i in duep:
-    m3u += '#EXTINF:-1 tvg-id="' + i[0] + '" tvg-name="' \
-           + i[0] + '" logo="' + duimg + '", Du, Dudu e Edu ' + i[0] + '\n'
-    m3u += i[1] + "\n"
-
-arq = open('listaDesenho.m3u', 'w')
-arq.write(m3u)
-arq.close()
+animes = esp.get()
+m3u(animes)

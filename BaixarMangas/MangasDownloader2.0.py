@@ -61,8 +61,7 @@ class Manga:
             mangas = b.find_all('div', 'bloco-manga')
             for i in mangas:
                 lin = i.find_all('a')[-1]
-                info['nome'].append(DownloadWindow.sanitizestring(lin.get("href").split('/')[-1]
-                                                                  .replace('-', ' ').title()))
+                info['nome'].append(DownloadWindow.sanitizestring(lin.get("href").split('/')[-1].replace('-', ' ').title()))
                 # info['nome'].append(DownloadWindow.sanitizestring(lin.text))
                 info['link'].append(lin.get("href"))
             io = StringIO()
