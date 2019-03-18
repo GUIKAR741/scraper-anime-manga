@@ -178,8 +178,9 @@ def m3u(animes_parse: dict):
         for j in i['episodios']:
             if j is not None:
                 k = [*j.keys()][0]
-                m3u += '#EXTINF:-1 tvg-id="' + i['nome'] + '" tvg-name="' \
-                       + i['nome'] + '" logo="' + i['img'] + '", ' + i['nome'] + ' ' + k + '\n'
+                m3u += '#EXTINF:-1 tvg-id="' + i['nome'].replace(',', '') + '" tvg-name="' \
+                       + i['nome'].replace(',', '') + '" logo="' + i['img'].replace(',', '') + '", ' \
+                       + i['nome'].replace(',', '') + ' ' + k.replace(',', '') + '\n'
                 m3u += j[k] + "\n"
     arq = open('listas/listaDesenho.m3u', 'w')
     arq.write(m3u)
