@@ -75,8 +75,9 @@ def download_video(link):
             }
             if bb:
                 ll = bb.get("src") if ('http' or 'https') in bb.get('src') else "https:" + bb.get('src')
-                r = get(ll, stream=True, allow_redirects=False, headers=headers)
-                return {nome: r.headers['location']}
+                # r = get(ll, stream=True, allow_redirects=False, headers=headers)
+                r = ll
+                return {nome: r}
             else:
                 bb = b.find('a', title="Baixar Video")
                 if bb:
@@ -84,13 +85,15 @@ def download_video(link):
                     b = Bs(r.content, 'html.parser')
                     bb = b.find("a", "bt-download")
                     if bb:
-                        head = pega_link(bb.get("href") if ('http' or 'https') in bb.get('href') else "https:" +
-                                                                                                      bb.get('href'),
-                                         headers)
+                        # head = pega_link(bb.get("href") if ('http' or 'https') in bb.get('href') else "https:" +
+                        #                                                                               bb.get('href'),
+                        #                  headers)
+                        head = bb.get("href") if ('http' or 'https') in bb.get('href') else "https:" + bb.get('href')
                         return {nome: head}
         except (Exception, AttributeError) as exp:
             print("Down", link_[0], exp)
             return down(link_)
+
     try:
         node = Pool(5)
         espera = node.map_async(down, link['episodios'])
@@ -120,7 +123,7 @@ def pagina_anime(ani: dict):
     # try:
     print(ani['nome'])
     link = ani['link']
-    link = link if ('http' or 'https') in link else "https:"+link
+    link = link if ('http' or 'https') in link else "https:" + link
     r = req_link(link)
     b = Bs(r.content, 'html.parser')
     id_cat = b.find('div', attrs={"data-id-cat": True}).get("data-id-cat")
@@ -143,7 +146,7 @@ def pagina_anime(ani: dict):
                 bb = Bs(body['body'][II], 'html.parser')
                 a = bb.find('div', 'epsBoxSobre').find('a')
                 ani['episodios'].append((a.text, a.get('href') if ('http' or 'https') in a.get('href')
-                                         else "https:" + a.get('href')))
+                else "https:" + a.get('href')))
     box = b.find_all("div", 'boxBarraInfo js_dropDownBtn active')
     if box:
         for K in box:
@@ -151,15 +154,15 @@ def pagina_anime(ani: dict):
             ova = par.find_all('div', 'epsBox')
             if ova:
                 for kk in ova:
-                    ani['episodios'].append((str("OVA: "+kk.find("h3").a.text), kk.find("h3").a.get("href")
-                                             if ('http' or 'https') in kk.find("h3").a.get("href")
-                                             else "https:" + kk.find("h3").a.get("href")))
+                    ani['episodios'].append((str("OVA: " + kk.find("h3").a.text), kk.find("h3").a.get("href")
+                    if ('http' or 'https') in kk.find("h3").a.get("href")
+                    else "https:" + kk.find("h3").a.get("href")))
             fil = par.find_all('div', 'epsBoxFilme')
             if fil:
                 for L in fil:
-                    ani['episodios'].append((str("FILME: "+L.find("h4").text), L.find("a").get("href")
-                                             if ('http' or 'https') in L.find("a").get("href")
-                                             else "https:" + L.find("a").get("href")))
+                    ani['episodios'].append((str("FILME: " + L.find("h4").text), L.find("a").get("href")
+                    if ('http' or 'https') in L.find("a").get("href")
+                    else "https:" + L.find("a").get("href")))
     # io = StringIO()
     # dump(dic, io)
     # json_s = io.getvalue()
@@ -176,11 +179,12 @@ def m3u(animes_parse: dict):
     m3u = '#EXTM3U\n'
     for i in animes_parse:
         for j in i['episodios']:
+            nome = ' '.join(i['nome'].replace(',', '').replace('-', ' ').split())
             if j is not None:
                 k = [*j.keys()][0]
-                m3u += '#EXTINF:-1 tvg-id="' + i['nome'].replace(',', '') + '" tvg-name="' \
-                       + i['nome'].replace(',', '') + '" logo="' + i['img'].replace(',', '') + '", ' \
-                       + i['nome'].replace(',', '') + ' ' + k.replace(',', '') + '\n'
+                m3u += '#EXTINF:-1 tvg-id="' + nome + '" tvg-name="' + nome + '" logo="' \
+                       + i['img'].replace(',', '%2C') + '", ' + nome + " " \
+                       + ' '.join(k.replace(',', ' ').replace('-', ' ').split()) + '\n'
                 m3u += j[k] + "\n"
     arq = open('listas/listaDesenho.m3u', 'w')
     arq.write(m3u)
@@ -195,7 +199,7 @@ esp = no.map_async(pagina_anime, animes)
 esp.wait()
 animes = esp.get()
 print("Alterar Links")
-no = Pool(5)
+no = Pool(20)
 esp = no.map_async(download_video, animes)
 esp.wait()
 animes = esp.get()
