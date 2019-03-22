@@ -1,14 +1,17 @@
 from io import StringIO
 from json import dump, load
-from PIL.Image import open as open_image, ANTIALIAS
-from unicodedata import normalize, combining
-from bs4 import BeautifulSoup
-from requests import get, RequestException
-from os import path, walk, remove, mkdir, getcwd, rename
+from os import getcwd, mkdir, path, remove, rename, walk
+from re import sub, compile
 from threading import Thread
-from tkinter import *
-from tkinter import messagebox, ttk
-from re import sub
+from tkinter import (BOTH, DISABLED, END, LEFT, NORMAL, RIGHT, TOP, VERTICAL,
+                     Button, Entry, Frame, Label, Listbox, StringVar, Tk,
+                     Toplevel, X, Y, messagebox, ttk)
+from unicodedata import combining, normalize
+
+from bs4 import BeautifulSoup
+from PIL.Image import ANTIALIAS
+from PIL.Image import open as open_image
+from requests import RequestException, get
 
 
 class Manga:
@@ -35,8 +38,8 @@ class Manga:
 
         Label(self.framedt, textvariable=self.speed).pack()
         Label(self.framedt, textvariable=self.eta).pack()
-        from tkinter.ttk import Progressbar
-        self.mpb = Progressbar(self.master, orient="horizontal", length=300, mode="determinate")
+        self.mpb = ttk.Progressbar(
+            self.master, orient="horizontal", length=300, mode="determinate")
         self.mpb.pack(pady=5)
         self.tam = 0
         self.per = 0
@@ -53,7 +56,7 @@ class Manga:
                 resul = req_link(u)
             return resul
 
-        num = int(re.compile('([0-9]+)').findall(link)[0])
+        num = int(compile('([0-9]+)').findall(link)[0])
         if not path.isfile("mangas/Pagina %s.json" % num):
             info = {'nome': [], 'link': []}
             r = req_link(link)
@@ -61,7 +64,8 @@ class Manga:
             mangas = b.find_all('div', 'bloco-manga')
             for i in mangas:
                 lin = i.find_all('a')[-1]
-                info['nome'].append(DownloadWindow.sanitizestring(lin.get("href").split('/')[-1].replace('-', ' ').title()))
+                info['nome'].append(DownloadWindow.sanitizestring(
+                    lin.get("href").split('/')[-1].replace('-', ' ').title()))
                 # info['nome'].append(DownloadWindow.sanitizestring(lin.text))
                 info['link'].append(lin.get("href"))
             io = StringIO()
@@ -96,13 +100,15 @@ class Manga:
         fim = 0
         for i in paginacao:
             if i.text == 'End':
-                fim = int(re.compile('([0-9]+)').findall(i.parent.get("href"))[0])
+                fim = int(compile(
+                    '([0-9]+)').findall(i.parent.get("href"))[0])
         self.mpb['maximum'] = self.tam = fim
         self.speed.set('Paginas: ' + str(self.tam))
         self.eta.set('Paginas Percorridas: %d' % 0)
         meio = fim // 2
         t = [Thread(target=self.busca_pag, args=[(link % 1), True, fim]),
-             Thread(target=self.busca_pag, args=[(link % (meio - 1)), False, fim]),
+             Thread(target=self.busca_pag, args=[
+                    (link % (meio - 1)), False, fim]),
              Thread(target=self.busca_pag, args=[(link % meio), True, fim]),
              Thread(target=self.busca_pag, args=[(link % fim), False, fim])]
         for i in t:
@@ -117,10 +123,10 @@ class Manga:
     @staticmethod
     def junta():
         dic = dict({'nome': [], 'link': []})
-        for l, j, k in walk("mangas/"):
+        for k in walk("mangas/"):
             lis = []
-            for ll in k:
-                s = re.compile('([0-9]+)').findall(ll)
+            for ll in k[2]:
+                s = compile('([0-9]+)').findall(ll)
                 if path.isfile("mangas/Pagina " + (s[0] if len(s) else '') + ".json"):
                     lis.append(int(s[0]))
             lis.sort()
@@ -221,9 +227,12 @@ class Tela:
         self.etProc = Entry(self.fra1, textvariable=self.busca, width=65)
         self.etProc.pack(side=LEFT)
         self.btProc = Button(self.fra1, text='Procurar', command=self.procura)
-        self.ren1 = Button(fra3, text="Renomear Normal", command=lambda: self.renomear(1))
-        self.ren2 = Button(fra3, text="Renomear Celular", command=lambda: self.renomear(2))
-        self.ren3 = Button(fra3, text="Renomear Re-Criar e Celular", command=lambda: self.renomear(3))
+        self.ren1 = Button(fra3, text="Renomear Normal",
+                           command=lambda: self.renomear(1))
+        self.ren2 = Button(fra3, text="Renomear Celular",
+                           command=lambda: self.renomear(2))
+        self.ren3 = Button(
+            fra3, text="Renomear Re-Criar e Celular", command=lambda: self.renomear(3))
         self.btProc.pack(side=LEFT)
         self.fra1.pack(fill=X)
         fra3.pack()
@@ -233,7 +242,8 @@ class Tela:
         self.bt1 = Button(self.fra2, text="Pegar valor", command=self.li)
         self.bt2 = Button(self.fra2, text="Voltar", command=self.voltar)
         self.bt3 = Button(self.fra2, text="Baixar", command=self.baixar)
-        self.bt4 = Button(self.fra2, text="Atualizar Base", command=self.busca_p)
+        self.bt4 = Button(self.fra2, text="Atualizar Base",
+                          command=self.busca_p)
         self.ren1.pack(side=LEFT)
         self.ren2.pack(side=LEFT)
         self.ren3.pack(side=LEFT)
@@ -251,9 +261,11 @@ class Tela:
                     break
             self.selecionado = ind
             url = self.ani['link'][ind]
-            nome = str(ind + 1) + " " + DownloadWindow.sanitizestring(self.ani['nome'][ind])
+            nome = str(ind + 1) + " " + \
+                DownloadWindow.sanitizestring(self.ani['nome'][ind])
             new_window = Toplevel(self.tk)
-            Thread(target=Manga, args=[new_window, self, 'Procurando...', nome, url]).start()
+            Thread(target=Manga, args=[
+                   new_window, self, 'Procurando...', nome, url]).start()
 
     def mostra_ani(self):
         self.ani = load(open("mangas/" + str(self.selecionado + 1) + " " +
@@ -281,7 +293,8 @@ class Tela:
                 for i in ind:
                     self.mylist.insert(END, self.ani['nome'][i])
             else:
-                messagebox.showerror("Anime Downloader", "Anime não Encontrado!")
+                messagebox.showerror("Anime Downloader",
+                                     "Anime não Encontrado!")
         else:
             self.btProc['text'] = 'Procurar'
             self.etProc['state'] = NORMAL
@@ -309,7 +322,8 @@ class Tela:
         if self.mylist.curselection():
             url = self.ani['link'][self.mylist.curselection()[0]]
             new_window = Toplevel(self.tk)
-            Thread(target=DownloadWindow, args=[new_window, url, self.dir]).start()
+            Thread(target=DownloadWindow, args=[
+                   new_window, url, self.dir]).start()
 
     def busca_p(self):
         new_window = Toplevel(self.tk)
@@ -349,14 +363,17 @@ class Tela:
                                 im = open_image(_ + "/" + arq)
                                 x, y = im.size
                                 if coloca_hifen == 1:
-                                    im.resize((x, y), ANTIALIAS).save(_ + "/-" + arq)
+                                    im.resize((x, y), ANTIALIAS).save(
+                                        _ + "/-" + arq)
                                     remove(_ + "/" + arq)
                                 else:
-                                    im.resize((x, y), ANTIALIAS).save(_ + "/" + arq.replace("-", ""))
+                                    im.resize((x, y), ANTIALIAS).save(
+                                        _ + "/" + arq.replace("-", ""))
                                     remove(_ + "/" + arq)
                             except (ValueError, IOError):
                                 from tkinter import messagebox
-                                messagebox.showerror("Mangás Downloader", "Erro no Arquivo:\n" + _ + "/" + arq)
+                                messagebox.showerror(
+                                    "Mangás Downloader", "Erro no Arquivo:\n" + _ + "/" + arq)
                         else:
                             if not col:
                                 aa = arq.split(".")
@@ -364,7 +381,8 @@ class Tela:
                                        aa[aa.__len__() - 1])
                             else:
                                 aa = arq.split(".")
-                                rename(_ + "/" + arq, _ + "/" + str(i) + '.' + aa[aa.__len__() - 1])
+                                rename(_ + "/" + arq, _ + "/" +
+                                       str(i) + '.' + aa[aa.__len__() - 1])
                                 i += 1
         if mensagem != 1:
             from tkinter import messagebox
@@ -404,8 +422,8 @@ class DownloadWindow:
 
         Label(self.framedt, textvariable=self.speed).pack()
         Label(self.framedt, textvariable=self.eta).pack()
-        from tkinter.ttk import Progressbar
-        self.mpb = Progressbar(self.master, orient="horizontal", length=300, mode="determinate")
+        self.mpb = ttk.Progressbar(
+            self.master, orient="horizontal", length=300, mode="determinate")
         self.mpb.pack(pady=5)
         Thread(target=self.fbaixar, args=[pathdown, url]).start()
 
@@ -447,7 +465,7 @@ class DownloadWindow:
         nfkd = normalize('NFKD', palavra)
         palavrasemacento = u"".join([c for c in nfkd if not combining(c)])
         # Usa expressão regular para retornar a palavra apenas com números, letras e espaço
-        return sub("[^a-zA-Z0-9 \\\]", '', palavrasemacento)
+        return sub("[^a-zA-Z0-9 ]", '', palavrasemacento)
 
     @staticmethod
     def criapasta(pasta):

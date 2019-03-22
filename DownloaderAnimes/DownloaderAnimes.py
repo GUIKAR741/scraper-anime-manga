@@ -4,8 +4,9 @@ from operator import itemgetter
 from os import getcwd, listdir, mkdir, path, remove
 from re import sub
 from threading import Thread
-from tkinter import *
-from tkinter import messagebox, ttk
+from tkinter import (BOTH, DISABLED, END, LEFT, NORMAL, RIGHT, TOP, VERTICAL,
+                     Button, Entry, Frame, Label, Listbox, StringVar, Tk,
+                     Toplevel, X, Y, messagebox, ttk)
 from unicodedata import combining, normalize
 
 from bs4 import BeautifulSoup
@@ -37,8 +38,8 @@ class Anime:
 
         Label(self.framedt, textvariable=self.speed).pack()
         Label(self.framedt, textvariable=self.eta).pack()
-        from tkinter.ttk import Progressbar
-        self.mpb = Progressbar(self.master, orient="horizontal", length=300, mode="determinate")
+        self.mpb = ttk.Progressbar(
+            self.master, orient="horizontal", length=300, mode="determinate")
         self.mpb.pack(pady=5)
         self.tam = 0
         self.per = 0
@@ -136,7 +137,8 @@ class Anime:
             link = link if ('http' or 'https') in link else "https:"+link
             r = req_link(link)
             b = BeautifulSoup(r.content, 'html.parser')
-            id_cat = b.find('div', attrs={"data-id-cat": True}).get("data-id-cat")
+            id_cat = b.find(
+                'div', attrs={"data-id-cat": True}).get("data-id-cat")
             self.name.set(nome)
             atual = 1
             self.tam = 20
@@ -246,7 +248,8 @@ class Tela:
         self.bt1 = Button(self.fra2, text="Pegar valor", command=self.li)
         self.bt2 = Button(self.fra2, text="Voltar", command=self.voltar)
         self.bt3 = Button(self.fra2, text="Baixar", command=self.baixar)
-        self.bt4 = Button(self.fra2, text="Atualizar Base", command=self.busca_p)
+        self.bt4 = Button(self.fra2, text="Atualizar Base",
+                          command=self.busca_p)
         self.bt4.pack(side=LEFT)
         self.bt1.pack(side=LEFT)
         self.fra2.pack()
@@ -261,9 +264,11 @@ class Tela:
                     break
             self.selecionado = ind
             url = self.ani['link'][ind]
-            nome = str(ind + 1) + " " + Anime.sanitizestring(self.ani['nome'][ind])
+            nome = str(ind + 1) + " " + \
+                Anime.sanitizestring(self.ani['nome'][ind])
             new_window = Toplevel(self.tk)
-            Thread(target=Anime, args=[new_window, self, 'Procurando...', nome, url]).start()
+            Thread(target=Anime, args=[
+                   new_window, self, 'Procurando...', nome, url]).start()
 
     def mostra_ani(self):
         self.ani = load(open("animes/" + str(self.selecionado + 1) + " " +
@@ -291,7 +296,8 @@ class Tela:
                 for V in ind:
                     self.mylist.insert(END, self.ani['nome'][V])
             else:
-                messagebox.showerror("Anime Downloader", "Anime não Encontrado!")
+                messagebox.showerror("Anime Downloader",
+                                     "Anime não Encontrado!")
         else:
             self.btProc['text'] = 'Procurar'
             self.etProc['state'] = NORMAL
@@ -321,7 +327,8 @@ class Tela:
             nome = self.ani['ep'][self.mylist.curselection()[0]]
             conjunto = {'ep': nome, 'link': url}
             new_window = Toplevel(self.tk)
-            Thread(target=DownloadWindow, args=[new_window, None, conjunto]).start()
+            Thread(target=DownloadWindow, args=[
+                   new_window, None, conjunto]).start()
 
     def busca_p(self):
         new_window = Toplevel(self.tk)
@@ -355,8 +362,8 @@ class DownloadWindow:
 
         Label(self.framedt, textvariable=self.speed).pack()
         Label(self.framedt, textvariable=self.eta).pack()
-        from tkinter.ttk import Progressbar
-        self.mpb = Progressbar(self.master, orient="horizontal", length=300, mode="determinate")
+        self.mpb = ttk.Progressbar(
+            self.master, orient="horizontal", length=300, mode="determinate")
         self.mpb.pack(pady=5)
         Thread(target=self.download_video, args=[conj['link'], True]).start()
 
@@ -392,16 +399,19 @@ class DownloadWindow:
                 'Referer': link
             }
             if bb:
-                ll = bb.get("src") if ('http' or 'https') in bb.get('src') else "https:"+bb.get('src')
+                ll = bb.get("src") if ('http' or 'https') in bb.get(
+                    'src') else "https:"+bb.get('src')
                 r = get(ll, allow_redirects=False, headers=headers)
                 if retorno:
-                    download(r.headers['location'], nome, bar=self.testa_callback)
+                    download(r.headers['location'], nome,
+                             bar=self.testa_callback)
                 else:
                     return r.headers['location']
             else:
                 bb = b.find('a', title="Baixar Video")
                 if bb:
-                    r = req_link(bb.get("href") if ('http' or 'https') in bb.get('href') else "https:"+bb.get('href'))
+                    r = req_link(bb.get("href") if ('http' or 'https') in bb.get(
+                        'href') else "https:"+bb.get('href'))
                     b = BeautifulSoup(r.content, 'html.parser')
                     bb = b.find("a", "bt-download")
                     if bb:
