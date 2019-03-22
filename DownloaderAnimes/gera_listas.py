@@ -1,6 +1,6 @@
 from requests import get, RequestException, post
 from bs4 import BeautifulSoup as Bs
-from json import load, loads
+from json import loads
 from multiprocessing.dummy import Pool
 from operator import itemgetter
 
@@ -13,7 +13,7 @@ def busca_pag() -> list:
             resul = req_link(u, dados)
         return resul
 
-    link = "http://www.superanimes.site/inc/paginator.inc.php"
+    link = f"{base}inc/paginator.inc.php"
     total = 99
     atual = 1
     ani = {'nome': [], 'link': [], 'img': []}
@@ -56,10 +56,6 @@ def download_video(link):
             resul = req_link(u)
         return resul
 
-    def pega_link(href, header):
-        s = get(href, stream=True, allow_redirects=False, headers=header)
-        return s.headers['location']
-
     def down(link_):
         try:
             print(link_[0])
@@ -70,12 +66,8 @@ def download_video(link):
             nome = b.find("h1", itemprop='name').text.split()[-1] + '-'
             nome += b.find("h2", itemprop='alternativeHeadline').text
             bb = b.find("source")
-            headers = {
-                'Referer': link_down
-            }
             if bb:
                 ll = bb.get("src") if ('http' or 'https') in bb.get('src') else "https:" + bb.get('src')
-                # r = get(ll, stream=True, allow_redirects=False, headers=headers)
                 r = ll
                 return {nome: r}
             else:
@@ -85,13 +77,10 @@ def download_video(link):
                     b = Bs(r.content, 'html.parser')
                     bb = b.find("a", "bt-download")
                     if bb:
-                        # head = pega_link(bb.get("href") if ('http' or 'https') in bb.get('href') else "https:" +
-                        #                                                                               bb.get('href'),
-                        #                  headers)
                         head = bb.get("href") if ('http' or 'https') in bb.get('href') else "https:" + bb.get('href')
                         return {nome: head}
-        except (Exception, AttributeError) as exp:
-            print("Down", link_[0], exp)
+        except Exception as e:
+            print("Down", link_[0], e)
             return down(link_)
 
     try:
@@ -129,7 +118,7 @@ def pagina_anime(ani: dict):
     id_cat = b.find('div', attrs={"data-id-cat": True}).get("data-id-cat")
     atual = 1
     tam = 99
-    link = "https://www.superanimes.site/inc/paginatorVideo.inc.php"
+    link = f"{base}inc/paginatorVideo.inc.php"
     ani['episodios'] = []
     while atual <= tam:
         data = {'id_cat': id_cat,
@@ -146,7 +135,7 @@ def pagina_anime(ani: dict):
                 bb = Bs(body['body'][II], 'html.parser')
                 a = bb.find('div', 'epsBoxSobre').find('a')
                 ani['episodios'].append((a.text, a.get('href') if ('http' or 'https') in a.get('href')
-                else "https:" + a.get('href')))
+                                        else "https:" + a.get('href')))
     box = b.find_all("div", 'boxBarraInfo js_dropDownBtn active')
     if box:
         for K in box:
@@ -155,43 +144,35 @@ def pagina_anime(ani: dict):
             if ova:
                 for kk in ova:
                     ani['episodios'].append((str("OVA: " + kk.find("h3").a.text), kk.find("h3").a.get("href")
-                    if ('http' or 'https') in kk.find("h3").a.get("href")
-                    else "https:" + kk.find("h3").a.get("href")))
+                                            if ('http' or 'https') in kk.find("h3").a.get("href")
+                                            else "https:" + kk.find("h3").a.get("href")))
             fil = par.find_all('div', 'epsBoxFilme')
             if fil:
                 for L in fil:
                     ani['episodios'].append((str("FILME: " + L.find("h4").text), L.find("a").get("href")
-                    if ('http' or 'https') in L.find("a").get("href")
-                    else "https:" + L.find("a").get("href")))
-    # io = StringIO()
-    # dump(dic, io)
-    # json_s = io.getvalue()
-    # arq = "animes/" + self.sanitizestring(nome) + ".json"
-    # arq = open(arq, 'w')
-    # arq.write(json_s)
-    # arq.close()
-    # except (Exception, AttributeError) as exception:
-    #     print(link, exception)
+                                            if ('http' or 'https') in L.find("a").get("href")
+                                            else "https:" + L.find("a").get("href")))
     return ani
 
 
 def m3u(animes_parse: dict):
-    m3u = '#EXTM3U\n'
+    m3u8 = '#EXTM3U\n'
     for i in animes_parse:
         for j in i['episodios']:
             nome = ' '.join(i['nome'].replace(',', '').replace('-', ' ').split())
             if j is not None:
                 k = [*j.keys()][0]
-                m3u += '#EXTINF:-1 tvg-id="' + nome + '" tvg-name="' + nome + '" logo="' \
-                       + i['img'].replace(',', '%2C') + '", ' + nome + " " \
-                       + ' '.join(k.replace(',', ' ').replace('-', ' ').split()) + '\n'
-                m3u += j[k] + "\n"
+                m3u8 += '#EXTINF:-1 tvg-id="' + nome + '" tvg-name="' + nome + '" logo="' \
+                        + i['img'].replace(',', '%2C') + '", ' + nome + " " \
+                        + ' '.join(k.replace(',', ' ').replace('-', ' ').split()) + '\n'
+                m3u8 += j[k] + "\n"
     arq = open('listas/listaDesenho.m3u', 'w')
-    arq.write(m3u)
+    arq.write(m3u8)
     arq.close()
 
 
 print("Procurar Episodios")
+base = "http://www.superanimes.com/"
 animes = busca_pag()
 print("Pegar Links")
 no = Pool(10)
