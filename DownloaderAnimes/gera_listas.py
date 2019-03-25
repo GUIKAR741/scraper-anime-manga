@@ -1,12 +1,15 @@
-from json import loads
+"""Gerar Listas de Desenhos."""
+from json import loads, load, dump
 from multiprocessing.dummy import Pool
 from operator import itemgetter
+from io import StringIO
 
 from bs4 import BeautifulSoup as Bs
 from requests import RequestException, get, post
 
 
 def busca_pag() -> list:
+    """Busca os Desenhos."""
     def req_link(u, dados):
         try:
             resul = post(u, data=dados)
@@ -25,10 +28,11 @@ def busca_pag() -> list:
                 'limit': 100,
                 'total_page': total,
                 'type': 'lista',
-                'filters': '{"filter_data":"filter_display_view=grade&filter_letter=0&filter_type_content=4&'
-                           'filter_genre_model=0&filter_order=a-z&filter_rank=0&filter_status=0&'
-                           'filter_idade=&filter_dub=0&filter_size_start=0&filter_size_final=0&'
-                           'filter_date=0&filter_viewed=0","filter_genre_add":[],"filter_genre_del":[]}'}
+                'filters': '{"filter_data":"filter_display_view=grade&filter_letter=0&'
+                           'filter_type_content=4&filter_genre_model=0&filter_order=a-z&'
+                           'filter_rank=0&filter_status=0&filter_idade=&filter_dub=0&'
+                           'filter_size_start=0&filter_size_final=0&filter_date=0&'
+                           'filter_viewed=0","filter_genre_add":[],"filter_genre_del":[]}'}
         e = req_link(link, data)
         body = loads(e.content)
         total = body['total_page']
@@ -51,6 +55,7 @@ def busca_pag() -> list:
 
 
 def download_video(link):
+    """Pega o Link."""
     def req_link(u):
         try:
             resul = get(u, stream=True)
@@ -58,8 +63,10 @@ def download_video(link):
             resul = req_link(u)
         return resul
 
-    def down(link_):
+    def down(link_, max: int = 1):
         try:
+            if max > 5:
+                return
             print(link_[0])
             link_down = link_[1]
             link_down = link_down if (
@@ -87,10 +94,10 @@ def download_video(link):
                         return {nome: head}
         except Exception as e:
             print("Down", link_[0], e)
-            return down(link_)
+            return down(link_, max+1)
 
     try:
-        node = Pool(5)
+        node = Pool(10)
         espera = node.map_async(down, link['episodios'])
         espera.wait()
         link['episodios'] = espera.get()
@@ -101,6 +108,7 @@ def download_video(link):
 
 
 def pagina_anime(ani: dict):
+    """Pega os Episodios."""
     def req_link(u):
         try:
             resul = get(u)
@@ -140,7 +148,8 @@ def pagina_anime(ani: dict):
             for II in range(len(body['body'])):
                 bb = Bs(body['body'][II], 'html.parser')
                 a = bb.find('div', 'epsBoxSobre').find('a')
-                ani['episodios'].append((a.text, a.get('href') if ('http' or 'https') in a.get('href')
+                ani['episodios'].append((a.text, a.get('href') if ('http' or 'https') in
+                                         a.get('href')
                                          else "https:" + a.get('href')))
     box = b.find_all("div", 'boxBarraInfo js_dropDownBtn active')
     if box:
@@ -149,19 +158,22 @@ def pagina_anime(ani: dict):
             ova = par.find_all('div', 'epsBox')
             if ova:
                 for kk in ova:
-                    ani['episodios'].append((str("OVA: " + kk.find("h3").a.text), kk.find("h3").a.get("href")
+                    ani['episodios'].append((str("OVA: " + kk.find("h3").a.text),
+                                             kk.find("h3").a.get("href")
                                              if ('http' or 'https') in kk.find("h3").a.get("href")
                                              else "https:" + kk.find("h3").a.get("href")))
             fil = par.find_all('div', 'epsBoxFilme')
             if fil:
                 for L in fil:
-                    ani['episodios'].append((str("FILME: " + L.find("h4").text), L.find("a").get("href")
+                    ani['episodios'].append((str("FILME: " + L.find("h4").text),
+                                             L.find("a").get("href")
                                              if ('http' or 'https') in L.find("a").get("href")
                                              else "https:" + L.find("a").get("href")))
     return ani
 
 
 def m3u(animes_parse: dict):
+    """Gera a Lista."""
     m3u8 = '#EXTM3U\n'
     for i in animes_parse:
         for j in i['episodios']:
@@ -179,17 +191,39 @@ def m3u(animes_parse: dict):
     arq.close()
 
 
+def salvar_arq(arq: dict, nome: str):
+    """Salva o arquivo json."""
+    io = StringIO()
+    dump(arq, io)
+    json_s = io.getvalue()
+    arq = open(f'{pasta}/{nome}.json', 'w')
+    arq.write(json_s)
+    arq.close()
+
+
+def ler_arq(nome: str) -> dict:
+    """Abre o arquivo json."""
+    return load(open(f'{pasta}/{nome}.json'))
+
+
 print("Procurar Episodios")
 base = "https://www.superanimes.com/"
-animes = busca_pag()
-print("Pegar Links")
-no = Pool(10)
-esp = no.map_async(pagina_anime, animes)
-esp.wait()
-animes = esp.get()
+pasta = "listas"
+# animes = busca_pag()
+# salvar_arq(animes, "desenho")
+# print("Pegar Links")
+# no = Pool(100)
+# animes = no.map_async(pagina_anime, animes)
+# animes.wait()
+# animes = animes.get()
+# salvar_arq(animes, "desenho")
+animes = ler_arq("desenho")
 print("Alterar Links")
-no = Pool(20)
-esp = no.map_async(download_video, animes)
-esp.wait()
-animes = esp.get()
+no = Pool(2)
+animes = no.map_async(download_video, animes)
+animes.wait()
+animes = animes.get()
+salvar_arq(animes, "desenho")
+print("Gera Lista")
 m3u(animes)
+print("fim")
