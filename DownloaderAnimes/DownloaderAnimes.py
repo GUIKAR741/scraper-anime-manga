@@ -1,3 +1,4 @@
+"""."""
 from io import StringIO
 from json import dump, load, loads
 from operator import itemgetter
@@ -15,7 +16,10 @@ from wget import download
 
 
 class Anime:
+    """."""
+
     def __init__(self, tk, tela_p, texto, nome="", url=""):
+        """."""
         self.master = tk
         self.telaP = tela_p
         self.master.minsize(width=500, height=200)
@@ -49,6 +53,7 @@ class Anime:
             Thread(target=self.pagina_anime, args=[nome, url]).start()
 
     def busca_pagina(self, buscar=False):
+        """."""
         def req_link(u, dados):
             try:
                 resul = post(u, data=dados)
@@ -72,9 +77,11 @@ class Anime:
                         'limit': 100,
                         'total_page': total,
                         'type': 'lista',
-                        'filters': '{"filter_data":"filter_letter=0&filter_type_content=100&filter_genre_model=0'
-                                   '&filter_order=0&filter_rank=0&filter_status=0&filter_idade=&filter_dub=0'
-                                   '&filter_size_start=0&filter_size_final=0&filter_date=0&filter_viewed=0",'
+                        'filters': '{"filter_data":"filter_letter=0&filter_type_content=100'
+                                   '&filter_genre_model=0&filter_order=0&filter_rank=0'
+                                   '&filter_status=0&filter_idade=&filter_dub=0'
+                                   '&filter_size_start=0&filter_size_final=0&filter_date=0'
+                                   '&filter_viewed=0",'
                                    '"filter_genre_add":[],"filter_genre_del":[]}'}
                 e = req_link(link, data)
                 body = loads(e.content)
@@ -90,8 +97,8 @@ class Anime:
                     b = BeautifulSoup(body['body'][I], 'html.parser')
                     a = b.find('h1', 'grid_title').find('a')
                     novo_ani['nome'] = a.text
-                    novo_ani['link'] = a.get('href') if ('http' or 'https') in a.get('href') else "https:" + a.get(
-                        'href')
+                    novo_ani['link'] = (a.get('href') if ('http' or 'https') in a.get('href') else
+                                        "https:" + a.get('href'))
                     lista_animes.append(novo_ani)
             for I in sorted(lista_animes, key=itemgetter('nome')):
                 ani['nome'].append(I['nome'])
@@ -111,6 +118,7 @@ class Anime:
 
     @staticmethod
     def sanitizestring(palavra):
+        """."""
         # Unicode normalize transforma um caracter em seu equivalente em latin.
         nfkd = normalize('NFKD', palavra)
         palavrasemacento = u"".join([c for c in nfkd if not combining(c)])
@@ -118,6 +126,7 @@ class Anime:
         return sub('[^a-zA-Z0-9 ]', '', palavrasemacento)
 
     def pagina_anime(self, nome, link):
+        """."""
         def req_link(u):
             try:
                 resul = get(u)
@@ -165,7 +174,9 @@ class Anime:
                         a = bb.find('div', 'epsBoxSobre').find('a')
                         dic['ep'].append(a.text)
                         dic['link'].append(
-                            a.get('href') if ('http' or 'https') in a.get('href') else "https:" + a.get('href'))
+                            a.get('href') if ('http' or 'https') in a.get('href') else
+                            "https:" + a.get('href')
+                        )
             box = b.find_all("div", 'boxBarraInfo js_dropDownBtn active')
             if box:
                 for K in box:
@@ -175,12 +186,14 @@ class Anime:
                         for kk in ova:
                             dic['ep'].append("OVA: "+kk.find("h3").a.text)
                             dic['link'].append(kk.find("h3").a.get("href") if ('http' or 'https') in
-                                               kk.find("h3").a.get("href") else "https:" + kk.find("h3").a.get("href"))
+                                               kk.find("h3").a.get("href") else "https:" +
+                                               kk.find("h3").a.get("href"))
                     fil = par.find_all('div', 'epsBoxFilme')
                     if fil:
                         for L in fil:
                             dic['ep'].append("FILME: "+L.find("h4").text)
-                            dic['link'].append(L.find("a").get("href") if ('http' or 'https') in L.find("a").get("href")
+                            dic['link'].append(L.find("a").get("href") if ('http' or 'https') in
+                                               L.find("a").get("href")
                                                else "https:" + L.find("a").get("href"))
             io = StringIO()
             dump(dic, io)
@@ -196,7 +209,10 @@ class Anime:
 
 
 class Tela:
+    """."""
+
     def __init__(self):
+        """."""
         self.tk = Tk()
         self.tk.geometry("600x400")
         self.tk.resizable(False, False)
@@ -227,6 +243,7 @@ class Tela:
         self.tk.mainloop()
 
     def inicia(self):
+        """."""
         self.fra1 = Frame(self.tk, bd=1)
         self.fra2 = Frame(self.tk, bd=1)
         self.scrollbar = ttk.Scrollbar(self.tk, orient=VERTICAL)
@@ -255,6 +272,7 @@ class Tela:
         self.fra2.pack()
 
     def li(self):
+        """."""
         if self.mylist.curselection():
             buscar = self.mylist.get(self.mylist.curselection()).lower()
             ind = -1
@@ -268,9 +286,10 @@ class Tela:
                 Anime.sanitizestring(self.ani['nome'][ind])
             new_window = Toplevel(self.tk)
             Thread(target=Anime, args=[
-                   new_window, self, 'Procurando...', nome, url]).start()
+                new_window, self, 'Procurando...', nome, url]).start()
 
     def mostra_ani(self):
+        """."""
         self.ani = load(open("animes/" + str(self.selecionado + 1) + " " +
                              Anime.sanitizestring(self.ani['nome'][self.selecionado]) + ".json"))
         self.atualiza("ep")
@@ -281,6 +300,7 @@ class Tela:
         self.bt3.pack(side=LEFT)
 
     def procura(self):
+        """."""
         buscar = self.busca.get().lower()
         self.busca.set('')
         if self.btProc['text'] == 'Procurar':
@@ -308,6 +328,7 @@ class Tela:
             self.is_voltar = False
 
     def voltar(self):
+        """."""
         self.ani = load(open("animes/Paginas.json"))
         self.atualiza("nome")
         self.bt2.forget()
@@ -316,27 +337,33 @@ class Tela:
         self.bt1.pack(side=LEFT)
 
     def atualiza(self, campo):
+        """."""
         for VI in range(self.mylist.size()):
             self.mylist.delete(0)
         for VI in range(len(self.ani[campo])):
             self.mylist.insert(END, self.ani[campo][VI])
 
     def baixar(self):
+        """."""
         if self.mylist.curselection():
             url = self.ani['link'][self.mylist.curselection()[0]]
             nome = self.ani['ep'][self.mylist.curselection()[0]]
             conjunto = {'ep': nome, 'link': url}
             new_window = Toplevel(self.tk)
             Thread(target=DownloadWindow, args=[
-                   new_window, None, conjunto]).start()
+                new_window, None, conjunto]).start()
 
     def busca_p(self):
+        """."""
         new_window = Toplevel(self.tk)
         Thread(target=Anime, args=[new_window, self, 'Atualizando...']).start()
 
 
 class DownloadWindow:
+    """."""
+
     def __init__(self, tk, icon, conj):
+        """."""
         self.master = tk
         self.master.minsize(width=500, height=200)
         self.master.maxsize(width=500, height=200)
@@ -368,6 +395,7 @@ class DownloadWindow:
         Thread(target=self.download_video, args=[conj['link'], True]).start()
 
     def testa_callback(self, current, total, width):
+        """."""
         width+1
         self.mpb['maximum'] = total
         self.mpb['value'] = current
@@ -375,6 +403,7 @@ class DownloadWindow:
         self.eta.set('Baixado: %.2lf Mbps' % ((current / 1024) / 1024))
 
     def download_video(self, link, retorno=False):
+        """."""
         def req_link(u):
             try:
                 resul = get(u)
@@ -402,6 +431,7 @@ class DownloadWindow:
                 ll = bb.get("src") if ('http' or 'https') in bb.get(
                     'src') else "https:"+bb.get('src')
                 r = get(ll, allow_redirects=False, headers=headers)
+                print(r.headers['location'])
                 if retorno:
                     download(r.headers['location'], nome,
                              bar=self.testa_callback)
@@ -415,8 +445,10 @@ class DownloadWindow:
                     b = BeautifulSoup(r.content, 'html.parser')
                     bb = b.find("a", "bt-download")
                     if bb:
-                        head = pega_link(bb.get("href") if ('http' or 'https') in bb.get('href') else "https:" +
-                                         bb.get('href'), headers)
+                        head = pega_link(bb.get("href") if ('http' or 'https') in
+                                         bb.get('href') else
+                                         "https:" + bb.get('href'), headers)
+                        print(head)
                         if retorno:
                             download(head, nome, bar=self.testa_callback)
                         else:
@@ -431,5 +463,5 @@ if __name__ == "__main__":
     for i in listdir('./'):
         if ".tmp" in i:
             remove(i)
-    base = "https://www.superanimes.com/"
+    base = "https://www.superanimes.site/"
     Tela()

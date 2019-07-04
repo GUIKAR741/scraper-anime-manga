@@ -1,3 +1,4 @@
+"""."""
 from requests import get
 from unicodedata import normalize, combining
 from re import sub
@@ -9,7 +10,10 @@ from tkinter import *
 
 
 class MangasDownload:
+    """."""
+
     def __init__(self, tk):
+        """."""
         # Instancia Tkinter
         self.tk = tk
         # Inicia variaveis
@@ -40,12 +44,14 @@ class MangasDownload:
         self.cria_interface_renomear()
 
     def inicia(self):
+        """."""
         self.tk.geometry("600x450")
         self.tk.resizable(False, False)
         # self.icon = self.dir + '\\' + 'down.ico'
         self.tk.title("Mangás Downloader")
 
     def frames(self):
+        """."""
         # Frame 1 - Baixar
         self.frame1 = Frame(self.tk, bd=1)
         self.frame1.pack()
@@ -54,6 +60,7 @@ class MangasDownload:
         self.frame2.pack()
 
     def cria_interface_baixar(self):
+        """."""
         # Frames Baixar
         frame_a = Frame(self.frame1, bd=1)
         frame_b = Frame(self.frame1, bd=1)
@@ -71,7 +78,8 @@ class MangasDownload:
         frame_d.pack(pady=5)
         frame_g.pack()
         ###
-        Label(frame_a, text='Mangás Download V1.0', width=100, font=("Helvetica", 14)).pack(side=TOP)
+        Label(frame_a, text='Mangás Download V1.0', width=100,
+              font=("Helvetica", 14)).pack(side=TOP)
         Label(frame_a, text='Baixar', font=("Helvetica", 14)).pack(side=LEFT)
         Label(frame_b, text='Link:').pack(side=LEFT)
         Entry(frame_b, textvariable=self.link, width=70).pack(side=LEFT)
@@ -85,15 +93,18 @@ class MangasDownload:
         botao = Button(frame_g, text='Download', command=self.download)
         botao.pack()
         Radiobutton(frame_d, text="Sim", variable=self.x,
-                    command=lambda: self.mostra_inter(frame_e, frame_g, botao, self.x.get()), value=1).pack(side=LEFT)
+                    command=lambda: self.mostra_inter(frame_e, frame_g, botao, self.x.get()),
+                    value=1).pack(side=LEFT)
         Radiobutton(frame_d, text="Não", variable=self.x,
-                    command=lambda: self.mostra_inter(frame_e, frame_g, botao, self.x.get()), value=2).pack(side=LEFT)
+                    command=lambda: self.mostra_inter(frame_e, frame_g, botao, self.x.get()),
+                    value=2).pack(side=LEFT)
         Label(frame_e, text='Inicio:').pack(side=LEFT)
         Entry(frame_e, textvariable=self.ini, width=5).pack(side=LEFT)
         Label(frame_e, text='Fim:').pack(side=LEFT)
         Entry(frame_e, textvariable=self.fim, width=5).pack(side=LEFT)
 
     def cria_interface_renomear(self):
+        """."""
         # Frames Baixar
         frame_a = Frame(self.frame2, bd=1)
         frame_b = Frame(self.frame2, bd=1, highlightbackground="gray", highlightcolor="gray",
@@ -116,6 +127,7 @@ class MangasDownload:
         Button(frame_c, text='Renomear', command=self.renomear).pack()
 
     def mostra_inter(self, frame, g, botao, tipo):
+        """."""
         self.ini.set('')
         self.fim.set('')
         if tipo == 1:
@@ -127,12 +139,14 @@ class MangasDownload:
         botao.pack(side=LEFT, padx=5)
 
     def salvar_arquivo(self):
+        """."""
         from tkinter import filedialog
         browser = filedialog.askdirectory(initialdir=self.dir, title="Salvar arquivo")
         self.dir = browser
         self.down.set(browser)
 
     def renomear_arquivo(self):
+        """."""
         from tkinter import filedialog
         browser = filedialog.askdirectory(initialdir=self.rena, title="Salvar arquivo")
         self.rena = browser
@@ -140,24 +154,29 @@ class MangasDownload:
 
     @staticmethod
     def valid_url(url):
-        return (("http://unionmangas." in url) or ("https://unionmangas." in url)) and ("leitor" in url)
+        """."""
+        return ((("http://unionmangas." in url) or ("https://unionmangas." in url)) and
+                ("leitor" in url))
 
     def download(self):
+        """."""
         url = self.link.get()
         self.link.set('')
         if url != '' and self.valid_url(url):
             new_window = Toplevel(self.tk)
-            DownloadWindow(new_window, self.icon, url, self.dir, self.op.get(), self.x.get(), self.ini.get(),
-                           self.fim.get())
+            DownloadWindow(new_window, self.icon, url, self.dir, self.op.get(), self.x.get(),
+                           self.ini.get(), self.fim.get())
         else:
             from tkinter import messagebox
             messagebox.showinfo("Mangás Downloader", "Insira uma url valída!")
 
     def renomear(self):
+        """."""
         esc = self.ren.get()
         Thread(target=self.renomear_thread, args=[esc]).start()
 
     def renomear_thread(self, esc):
+        """."""
         if esc == 1:
             self.frenomar(self.rena)
             self.frenomar(self.rena, col=True, mensagem=0)
@@ -192,12 +211,14 @@ class MangasDownload:
                                     im.resize((x, y), PIL.Image.ANTIALIAS).save(_ + "\\-" + arq)
                                     remove(_ + "\\" + arq)
                                 else:
-                                    im.resize((x, y), PIL.Image.ANTIALIAS).save(_ + "\\" + arq.replace("-", ""))
+                                    im.resize((x, y), PIL.Image.ANTIALIAS)
+                                        .save(_ + "\\" + arq.replace("-", ""))
                                     remove(_ + "\\" + arq)
                                 print(' a ')
                             except PermissionError:
                                 print()
-                                # messagebox.showerror("Mangás Downloader", "Erro no Arquivo:\n" + _ + "\\" + arq)
+                                # messagebox.showerror("Mangás Downloader",
+                                # "Erro no Arquivo:\n" + _ + "\\" + arq)
                         else:
                             if not col:
                                 aa = arq.split(".")
@@ -213,6 +234,7 @@ class MangasDownload:
             messagebox.showinfo("Mangás Downloader", "Arquivos Renomeados!")"""
 
     def frenomar(self, caminho, col=False, r=True, mensagem=1, coloca_hifen=1):
+        """."""
         for _, __, arquivo in walk(caminho):
             if str(_).find(caminho) != -1 and str(_).find("pycache") == -1:
                 tam = __.__len__()
@@ -236,15 +258,18 @@ class MangasDownload:
                                     im.resize((x, y), ANTIALIAS).save(_ + "/-" + arq)
                                     remove(_ + "/" + arq)
                                 else:
-                                    im.resize((x, y), ANTIALIAS).save(_ + "/" + arq.replace("-", ""))
+                                    im.resize((x, y), ANTIALIAS).save(_ + "/" +
+                                                                      arq.replace("-", ""))
                                     remove(_ + "/" + arq)
                             except (ValueError, IOError):
                                 from tkinter import messagebox
-                                messagebox.showerror("Mangás Downloader", "Erro no Arquivo:\n" + _ + "/" + arq)
+                                messagebox.showerror("Mangás Downloader",
+                                                     "Erro no Arquivo:\n" + _ + "/" + arq)
                         else:
                             if not col:
                                 aa = arq.split(".")
-                                rename(_ + "/" + arq, _ + "/" + self.nomei(aa[aa.__len__() - 2], col=True) + '.' +
+                                rename(_ + "/" + arq, _ + "/" +
+                                       self.nomei(aa[aa.__len__() - 2], col=True) + '.' +
                                        aa[aa.__len__() - 1])
                             else:
                                 aa = arq.split(".")
@@ -256,13 +281,17 @@ class MangasDownload:
 
     @staticmethod
     def nomei(i, col=False):
+        """."""
         if (str(i).__len__() < 2) and col:
             i = '0' + str(i)
         return str(i)
 
 
 class DownloadWindow:
+    """."""
+
     def __init__(self, tk, icon, url, pathdown, ren, inter, ini_inter, fim_inter):
+        """."""
         self.master = tk
         self.master.minsize(width=500, height=200)
         self.master.maxsize(width=500, height=200)
@@ -293,12 +322,14 @@ class DownloadWindow:
         self.mpb.pack(pady=5)
         ren = True if ren == 1 else False
         if inter == 1:
-            Thread(target=self.baixar_inter, args=[pathdown, url, ren, ini_inter, fim_inter]).start()
+            Thread(target=self.baixar_inter,
+                   args=[pathdown, url, ren, ini_inter, fim_inter]).start()
         elif inter == 2:
             Thread(target=self.fbaixar, args=[pathdown, url, ren]).start()
         #     http://unionmangas.site/leitor/Nanatsu_no_Taizai(Pt-Br)/275
 
     def fbaixar(self, caminho, url, ren=False):
+        """."""
         urls = url.split('/')
         self.mpb["value"] = 0
         st = self.sanitizestring(str(urls[urls.__len__() - 2]))
@@ -320,7 +351,8 @@ class DownloadWindow:
                 img = node.get("src")
             else:
                 img = 'http:' + node.get("src")
-            # img = 'http:' + node.get("src") if ('http:' not in node.get("src")) or ('https:' not in node.get(
+            # img = 'http:' + node.get("src") if ('http:' not in node.get("src")) or 
+            # ('https:' not in node.get(
             # "src")) else node.get("src")
             n = str(img).split(".")
             nome = self.nomei(i, ren)
@@ -333,6 +365,7 @@ class DownloadWindow:
         messagebox.showinfo("Mangás Downloader", "Download Concluido!")
 
     def baixar_inter(self, path_down_inter, url, ren=False, ini=0, fim=0):
+        """."""
         ini = int(ini)
         fim = int(fim)
         for i in range(ini, fim + 1):
@@ -344,6 +377,7 @@ class DownloadWindow:
         messagebox.showinfo("Mangás Downloader", "Download Concluido!")
 
     def ffbaixar(self, caminho, url, ren=False):
+        """."""
         self.speed.set("")
         self.mpb["value"] = 0
         urls = url.split('/')
@@ -370,31 +404,36 @@ class DownloadWindow:
 
     @staticmethod
     def sanitizestring(palavra):
+        """."""
         # Unicode normalize transforma um caracter em seu equivalente em latin.
         nfkd = normalize('NFKD', palavra)
         palavrasemacento = u"".join([c for c in nfkd if not combining(c)])
         # Usa expressão regular para retornar a palavra apenas com números, letras e espaço
-        return sub("[^a-zA-Z0-9 \\\]", '', palavrasemacento)
+        return sub("[^a-zA-Z0-9 ]", '', palavrasemacento)
 
     @staticmethod
     def criapasta(pasta):
+        """."""
         if not path.isdir(pasta):
             mkdir(pasta)
 
     @staticmethod
     def nomei(i, col=False):
+        """."""
         if (str(i).__len__() < 2) and col:
             i = '0' + str(i)
         return str(i)
 
     @staticmethod
     def reqbeau(url):
+        """."""
         r = get(url)
         b = BeautifulSoup(r.content, 'html.parser')
         return b
 
     @staticmethod
     def baixarimg(pasta, i, n, url_img):
+        """."""
         rr = get(str(url_img))
         with open(pasta + "/" + str(i) + "." + n[n.__len__() - 1], 'wb') as code:
             code.write(rr.content)
@@ -403,6 +442,7 @@ class DownloadWindow:
 
 
 def main():
+    """."""
     root = Tk()
     MangasDownload(root)
     # icon = getcwd() + '/' + 'down.ico'

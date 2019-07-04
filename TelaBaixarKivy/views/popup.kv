@@ -1,0 +1,73 @@
+<PopupDownload>:
+    size_hint: .5, .5
+    auto_dismiss: False
+    title: root.titulo
+    BoxLayout:
+        id: box
+        orientation: 'vertical'
+        BoxLayout:
+            orientation: 'vertical'
+            padding: dp(20)
+            Label:
+                text: root.texto
+            BoxLayout:
+                orientation: 'horizontal'
+                Label:
+                    text: "Tamanho:"
+                Label:
+                    id: tamanho
+                    text: "0"
+                Label:
+                    text: "MB"
+            BoxLayout:
+                orientation: 'horizontal'
+                Label:
+                    text: "Baixado:"
+                Label:
+                    id: baixado
+                    text: "0"
+                Label:
+                    text: "Mbps"
+            BoxLayout:
+                orientation: 'horizontal'
+                ProgressBar:
+                    id: barra
+                    height: '48dp'
+        Button:
+            id: cancelar
+            size_hint_y: None
+            height: '50dp'
+            text: 'Cancelar'
+            on_release: root.cancelar()
+
+<PopupProcura>:
+    size_hint: .5, .5
+    auto_dismiss: False
+    title: root.titulo
+    BoxLayout:
+        id: box
+        orientation: 'vertical'
+        BoxLayout:
+            orientation: 'vertical'
+            padding: dp(20)
+            Label:
+                text: root.texto
+            BoxLayout:
+                orientation: 'horizontal'
+                Label:
+                    text: "Paginas:"
+                Label:
+                    id: paginas
+                    text: "0"
+            BoxLayout:
+                orientation: 'horizontal'
+                Label:
+                    text: "Paginas Procuradas:"
+                Label:
+                    id: procuradas
+                    text: "0"
+            BoxLayout:
+                orientation: 'horizontal'
+                ProgressBar:
+                    id: barra
+                    height: '48dp'

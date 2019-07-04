@@ -1,3 +1,4 @@
+"""."""
 from io import StringIO
 from json import dump, load
 from os import getcwd, mkdir, path, remove, rename, walk
@@ -15,7 +16,10 @@ from requests import RequestException, get
 
 
 class Manga:
+    """."""
+
     def __init__(self, tk, tela_p, texto, nome="", url=""):
+        """."""
         self.master = tk
         self.telaP = tela_p
         self.master.minsize(width=500, height=150)
@@ -49,6 +53,7 @@ class Manga:
             Thread(target=self.pega_cap, args=[nome, url]).start()
 
     def busca_pag(self, link, direcao=True, maximo=0):
+        """."""
         def req_link(u):
             try:
                 resul = get(u)
@@ -86,6 +91,7 @@ class Manga:
             self.busca_pag((link % (int(num) - 1)), direcao, maximo)
 
     def sel_busca(self):
+        """."""
         def req_link(u):
             try:
                 resul = get(u)
@@ -108,7 +114,7 @@ class Manga:
         meio = fim // 2
         t = [Thread(target=self.busca_pag, args=[(link % 1), True, fim]),
              Thread(target=self.busca_pag, args=[
-                    (link % (meio - 1)), False, fim]),
+                 (link % (meio - 1)), False, fim]),
              Thread(target=self.busca_pag, args=[(link % meio), True, fim]),
              Thread(target=self.busca_pag, args=[(link % fim), False, fim])]
         for i in t:
@@ -122,6 +128,7 @@ class Manga:
 
     @staticmethod
     def junta():
+        """."""
         dic = dict({'nome': [], 'link': []})
         for k in walk("mangas/"):
             lis = []
@@ -146,6 +153,7 @@ class Manga:
         arq.close()
 
     def pega_cap(self, nome, link):
+        """."""
         def req_link(u):
             try:
                 resul = get(u)
@@ -170,6 +178,7 @@ class Manga:
         self.telaP.mostra_ani()
 
     def cria_man(self):
+        """."""
         abc = open("mangas/Paginas.json")
         man = load(abc)
         abc.close()
@@ -178,7 +187,10 @@ class Manga:
 
 
 class Tela:
+    """."""
+
     def __init__(self):
+        """."""
         self.nomeApp = "Mangás Downloader"
         self.tk = Tk()
         self.tk.geometry("600x500")
@@ -213,6 +225,7 @@ class Tela:
         self.tk.mainloop()
 
     def inicia(self):
+        """."""
         self.fra1 = Frame(self.tk, bd=1)
         fra3 = Frame(self.tk, bd=1)
         self.fra2 = Frame(self.tk, bd=1)
@@ -252,6 +265,7 @@ class Tela:
         self.fra2.pack()
 
     def li(self):
+        """."""
         if self.mylist.curselection():
             buscar = self.mylist.get(self.mylist.curselection()).lower()
             ind = -1
@@ -265,11 +279,13 @@ class Tela:
                 DownloadWindow.sanitizestring(self.ani['nome'][ind])
             new_window = Toplevel(self.tk)
             Thread(target=Manga, args=[
-                   new_window, self, 'Procurando...', nome, url]).start()
+                new_window, self, 'Procurando...', nome, url]).start()
 
     def mostra_ani(self):
+        """."""
         self.ani = load(open("mangas/" + str(self.selecionado + 1) + " " +
-                             DownloadWindow.sanitizestring(self.ani['nome'][self.selecionado]) + ".json"))
+                             DownloadWindow.sanitizestring(self.ani['nome'][self.selecionado]) +
+                             ".json"))
         self.atualiza("cap")
         self.bt1.forget()
         self.bt4.forget()
@@ -278,6 +294,7 @@ class Tela:
         self.bt3.pack(side=LEFT)
 
     def procura(self):
+        """."""
         buscar = self.busca.get().lower()
         self.busca.set('')
         if self.btProc['text'] == 'Procurar':
@@ -305,6 +322,7 @@ class Tela:
             self.isVoltar = False
 
     def voltar(self):
+        """."""
         self.ani = load(open("mangas/Paginas.json"))
         self.atualiza("nome")
         self.bt2.forget()
@@ -313,27 +331,32 @@ class Tela:
         self.bt1.pack(side=LEFT)
 
     def atualiza(self, campo):
+        """."""
         for i in range(self.mylist.size()):
             self.mylist.delete(0)
         for i in range(len(self.ani[campo])):
             self.mylist.insert(END, self.ani[campo][i])
 
     def baixar(self):
+        """."""
         if self.mylist.curselection():
             url = self.ani['link'][self.mylist.curselection()[0]]
             new_window = Toplevel(self.tk)
             Thread(target=DownloadWindow, args=[
-                   new_window, url, self.dir]).start()
+                new_window, url, self.dir]).start()
 
     def busca_p(self):
+        """."""
         new_window = Toplevel(self.tk)
         Thread(target=Manga, args=[new_window, self, 'Atualizando...']).start()
 
     def renomear(self, esc):
+        """."""
         # esc = self.ren.get()
         Thread(target=self.renomear_thread, args=[esc]).start()
 
     def renomear_thread(self, esc):
+        """."""
         if esc == 1:
             self.frenomar(self.dir)
             self.frenomar(self.dir, col=True, mensagem=0)
@@ -349,8 +372,10 @@ class Tela:
             self.frenomar(self.dir, r=False, mensagem=0, coloca_hifen=0)
 
     def frenomar(self, caminho, col=False, r=True, mensagem=1, coloca_hifen=1):
+        """."""
         for _, __, arquivo in walk(caminho):
-            if str(_).find(caminho) != -1 and str(_).find("pycache") == -1 and str(_).find(caminho+"/mangas") == -1:
+            if (str(_).find(caminho) != -1 and str(_).find("pycache") == -1 and
+                    str(_).find(caminho+"/mangas") == -1):
                 tam = __.__len__()
                 if tam == 0:
                     i = 1
@@ -377,7 +402,8 @@ class Tela:
                         else:
                             if not col:
                                 aa = arq.split(".")
-                                rename(_ + "/" + arq, _ + "/" + self.nomei(aa[aa.__len__() - 2], col=True) + '.' +
+                                rename(_ + "/" + arq, _ + "/" +
+                                       self.nomei(aa[aa.__len__() - 2], col=True) + '.' +
                                        aa[aa.__len__() - 1])
                             else:
                                 aa = arq.split(".")
@@ -390,13 +416,17 @@ class Tela:
 
     @staticmethod
     def nomei(i, col=False):
+        """."""
         if (str(i).__len__() < 2) and col:
             i = '0' + str(i)
         return str(i)
 
 
 class DownloadWindow:
+    """."""
+
     def __init__(self, tk, url, pathdown):
+        """."""
         self.master = tk
         self.master.minsize(width=500, height=200)
         self.master.maxsize(width=500, height=200)
@@ -428,6 +458,7 @@ class DownloadWindow:
         Thread(target=self.fbaixar, args=[pathdown, url]).start()
 
     def fbaixar(self, caminho, url, ren=False):
+        """."""
         urls = url.split('/')
         self.mpb["value"] = 0
         st = self.sanitizestring(str(urls[urls.__len__() - 2]))
@@ -461,6 +492,7 @@ class DownloadWindow:
 
     @staticmethod
     def sanitizestring(palavra):
+        """."""
         # Unicode normalize transforma um caracter em seu equivalente em latin.
         nfkd = normalize('NFKD', palavra)
         palavrasemacento = u"".join([c for c in nfkd if not combining(c)])
@@ -469,17 +501,20 @@ class DownloadWindow:
 
     @staticmethod
     def criapasta(pasta):
+        """."""
         if not path.isdir(pasta):
             mkdir(pasta)
 
     @staticmethod
     def nomei(i, col=False):
+        """."""
         if (str(i).__len__() < 2) and col:
             i = '0' + str(i)
         return str(i)
 
     @staticmethod
     def reqbeau(url):
+        """."""
         try:
             r = get(url)
             b = BeautifulSoup(r.content, 'html.parser')
@@ -489,6 +524,7 @@ class DownloadWindow:
 
     @staticmethod
     def baixarimg(pasta, i, n, url_img):
+        """."""
         rr = get(str(url_img))
         with open(pasta + "/" + str(i) + "." + n[n.__len__() - 1], 'wb') as code:
             code.write(rr.content)
