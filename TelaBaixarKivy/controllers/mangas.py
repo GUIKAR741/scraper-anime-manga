@@ -6,7 +6,7 @@ from .popup import PopupProcura  # pylint: disable=relative-beyond-top-level
 from .telaBase import Tela  # pylint: disable=relative-beyond-top-level
 
 
-class Animes(Tela):
+class Mangas(Tela):
     """."""
 
     def on_enter(self, *args, **kwargs):
@@ -26,10 +26,10 @@ class Animes(Tela):
         if self.ids.buscar.text == 'Buscar':
             busca = self.ids.texto.text.lower()
             retorno = []
-            for i in range(len(self.animes['nome'])):
-                if busca in self.animes['nome'][i].lower():
-                    retorno.append({'titulo': self.animes['nome'][i],
-                                    'link': self.animes['link'][i]})
+            for i in range(len(self.mangas['nome'])):
+                if busca in self.mangas['nome'][i].lower():
+                    retorno.append({'titulo': self.mangas['nome'][i],
+                                    'link': self.mangas['link'][i]})
             self.ids.rv.data = retorno
             self.ids.texto.text = ''
             self.ids.buscar.text = 'Resetar'
@@ -43,14 +43,14 @@ class Animes(Tela):
         """."""
         p = PopupProcura()
         p.open()
-        p.atualizar('animes', self._atualizar_lista)
+        p.atualizar('mangas', self._atualizar_lista)
 
     def _atualizar_lista(self):
         """."""
-        if path.isfile("res/PaginasAnimes.json"):
-            self.animes = load(open("res/PaginasAnimes.json"))
-            self.ids.rv.data = [{'titulo': self.animes['nome'][i],
-                                 'link': self.animes['link'][i],
-                                 'tituloBotao': 'Ver Episodios',
-                                 'tipo': 'anime'}
-                                for i in range(len(self.animes['nome']))]
+        if path.isfile("res/PaginasMangas.json"):
+            self.mangas = load(open("res/PaginasMangas.json"))
+            self.ids.rv.data = [{'titulo': self.mangas['nome'][i],
+                                 'link': self.mangas['link'][i],
+                                 'tituloBotao': 'Ver Capitulos',
+                                 'tipo': 'manga'}
+                                for i in range(len(self.mangas['nome']))]

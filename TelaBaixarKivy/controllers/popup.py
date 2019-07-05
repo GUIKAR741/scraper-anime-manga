@@ -2,10 +2,14 @@
 from io import StringIO
 from json import dump, loads
 from operator import itemgetter
-from re import sub
+from re import sub, compile
 from threading import Thread, current_thread
 from unicodedata import combining, normalize
+from os import path, getcwd, mkdir
+from multiprocessing.dummy import Pool
+from queue import Queue
 
+from PIL.Image import open as open_image
 from bs4 import BeautifulSoup as bs
 from kivy.metrics import dp
 from kivy.properties import Property  # pylint: disable=no-name-in-module
@@ -29,9 +33,20 @@ class PopupDownload(Popup):
         """."""
         super().__init__(*args, **kwargs)
 
-    def baixar(self, link):
+    def _sanitizestring(self, palavra):
         """."""
-        self.thr = Thread(target=self._download_video, args=[link])
+        # Unicode normalize transforma um caracter em seu equivalente em latin.
+        nfkd = normalize('NFKD', palavra)
+        palavrasemacento = u"".join([c for c in nfkd if not combining(c)])
+        # Usa expressão regular para retornar a palavra apenas com números, letras e espaço
+        return sub('[^a-zA-Z0-9 ]', '', palavrasemacento)
+
+    def baixar(self, tipo, link):
+        """."""
+        if tipo == 'episodio':
+            self.thr = Thread(target=self._download_video, args=[link])
+        elif tipo == 'capitulo':
+            self.thr = Thread(target=self._download_capitulo, args=[link])
         self.thr.parar = False
         self.thr.start()
 
@@ -108,6 +123,69 @@ class PopupDownload(Popup):
         except (Exception, AttributeError) as exp:
             print(link, exp)
 
+    def _download_capitulo(self, url):
+        """."""
+        self.ids.box.remove_widget(self.ids.cancelar)
+        self.ids.tamanho.text = ''
+        self.ids.textoTamanho.text = ''
+        self.ids.mb.text = ''
+        self.ids.mbps.text = 'Paginas'
+        caminho = getcwd()
+        urls = url.split('/')
+        st = self._sanitizestring(str(urls[urls.__len__() - 2]))
+        pasta = caminho + '/' + st + "_" + urls[urls.__len__() - 1]
+        bb = bs(self._req_link(url).content, 'html.parser')
+        self.criapasta(pasta)
+        i = 1
+        self.texto = url
+        imagens = bb.find_all('img', pag=True)
+        for node in imagens:
+            if str(node.get("src")).find("leitor") == -1:
+                imagens.remove(node)
+        self.titulo = "Baixando..."
+        self.ids.baixado.text = "00/" + str(len(imagens))
+        p = Pool(10)
+        self.i = 1
+        self.total = str(len(imagens))
+        p = p.map_async(lambda x: self.baixarimg(*x), [
+            [
+                pasta,
+                '0'+str(i+1) if len(str(i+1)) < 2 else i+1,
+                str(imagens[i].get('src')
+                    if "http:" in imagens[i].get("src") or
+                    "https:" in imagens[i].get("src")
+                    else 'http:' + imagens[i].get("src")).split("."),
+                imagens[i].get('src')
+                if "http:" in imagens[i].get("src") or
+                "https:" in imagens[i].get("src")
+                else 'http:' + imagens[i].get("src")
+            ] for i in range(len(imagens))
+        ])
+        p.wait()
+        self.titulo = "Download Concluido!"
+        btn = Button()
+        btn.size_hint_y = None
+        btn.height = dp(50)
+        btn.text = self.textoBotao
+        btn.on_press = lambda: self.funcao(self)
+        self.ids.box.add_widget(btn)
+
+    def criapasta(self, pasta):
+        """."""
+        if not path.isdir(pasta):
+            mkdir(pasta)
+
+    def baixarimg(self, pasta, i, n, url_img):
+        """."""
+        rr = self._req_link(str(url_img))
+        with open(pasta + "/" + str(i) + "." + n[n.__len__() - 1], 'wb') as code:
+            code.write(rr.content)
+        open_image(pasta + "/" + str(i) + "." + n[n.__len__() - 1]).save(
+            pasta + "/" + str(i) + "." + n[n.__len__() - 1])
+        self.ids.baixado.text = str(self.i) + "/" + self.total
+        self.ids.barra.value = self.i/self.total * 100
+        self.i += 1
+
 
 class PopupProcura(Popup):
     """Componente Popup."""
@@ -145,17 +223,23 @@ class PopupProcura(Popup):
         # Usa expressão regular para retornar a palavra apenas com números, letras e espaço
         return sub('[^a-zA-Z0-9 ]', '', palavrasemacento)
 
-    def procura(self, nome, link, rv):
+    def procura(self, tipo, nome, link, rv):
         """."""
-        Thread(target=self._pagina_anime, args=[nome, link, rv]).start()
+        if tipo == 'anime':
+            Thread(target=self._pagina_anime, args=[nome, link, rv]).start()
+        else:
+            Thread(target=self._pagina_manga, args=[nome, link, rv]).start()
 
-    def atualizar(self, func):
+    def atualizar(self, tipo, func):
         """."""
         self.titulo = 'Atualizando...'
         self.texto = ''
-        Thread(target=self._atualizar_pagina, args=[func]).start()
+        if tipo == 'animes':
+            Thread(target=self._atualizar_pagina_animes, args=[func]).start()
+        else:
+            Thread(target=self._atualizar_pagina_mangas, args=[func]).start()
 
-    def _atualizar_pagina(self, func):
+    def _atualizar_pagina_animes(self, func):
         """."""
         link = f"{self.base}inc/paginator.inc.php"
         total = 99
@@ -170,11 +254,11 @@ class PopupProcura(Popup):
                     'total_page': total,
                     'type': 'lista',
                     'filters': '{"filter_data":"filter_letter=0&filter_type_content=100'
-                                '&filter_genre_model=0&filter_order=0&filter_rank=0'
-                                '&filter_status=0&filter_idade=&filter_dub=0'
-                                '&filter_size_start=0&filter_size_final=0&filter_date=0'
-                                '&filter_viewed=0",'
-                                '"filter_genre_add":[],"filter_genre_del":[]}'}
+                               '&filter_genre_model=0&filter_order=0&filter_rank=0'
+                               '&filter_status=0&filter_idade=&filter_dub=0'
+                               '&filter_size_start=0&filter_size_final=0&filter_date=0'
+                               '&filter_viewed=0",'
+                               '"filter_genre_add":[],"filter_genre_del":[]}'}
             e = self._req_link_post(link, data)
             body = loads(e.content)
             total = body['total_page']
@@ -197,11 +281,66 @@ class PopupProcura(Popup):
         io = StringIO()
         dump(ani, io)
         json_s = io.getvalue()
-        arq = open("res/Paginas.json", 'w')
+        arq = open("res/PaginasAnimes.json", 'w')
         arq.write(json_s)
         arq.close()
         self.dismiss()
         func()
+
+    def _atualizar_pagina_mangas(self, func):
+        """Refatorar essa Merda."""
+        r = self._req_link("https://unionmangas.top/lista-mangas")
+        b = bs(r.text, 'html.parser')
+        paginacao = b.find("ul", "pagination").find_all('span', "sr-only")
+        link = "https://unionmangas.top/lista-mangas/a-z/%s/*"
+        self.tam = 0
+        self.per = 1
+        for i in paginacao:
+            if i.text == 'End':
+                self.tam = int(compile(
+                    '([0-9]+)').findall(i.parent.get("href"))[0])
+        self.ids.paginas.text = str(self.tam)
+        self.q = Queue()
+        [self.q.put(link % i) for i in range(1, self.tam+1)]
+        self.resQ = []
+        p = [Thread(target=self._busca_pag, args=[self.q]) for i in range(5)]
+        [i.start() for i in p]
+        [i.join() for i in p]
+        self._junta([i[1] for i in sorted(self.resQ, key=lambda x: x[0])])
+        self.dismiss()
+        func()
+
+    def _junta(self, paginas):
+        """."""
+        dic = dict({'nome': [], 'link': []})
+        for i in paginas:
+            js = i
+            dic['nome'] += js['nome']
+            dic['link'] += js['link']
+        io = StringIO()
+        dump(dic, io)
+        json_s = io.getvalue()
+        arq = open("res/PaginasMangas.json", 'w')
+        arq.write(json_s)
+        arq.close()
+
+    def _busca_pag(self, fila, direcao=True, maximo=0):
+        """."""
+        while not fila.empty():
+            link = fila.get()
+            info = {'nome': [], 'link': []}
+            r = self._req_link(link)
+            b = bs(r.text, 'html.parser')
+            mangas = b.find_all('div', 'bloco-manga')
+            for i in mangas:
+                lin = i.find_all('a')[-1]
+                info['nome'].append(self._sanitizestring(
+                    lin.get("href").split('/')[-1].replace('-', ' ').title()))
+                info['link'].append(lin.get("href"))
+            self.ids.barra.value = self.per/self.tam * 100
+            self.ids.procuradas.text = ('%d' % self.per)
+            self.per += 1
+            self.resQ.append((int(compile('([0-9]+)').findall(link)[0]), info))
 
     def _pagina_anime(self, nome, link, rv):
         """."""
@@ -264,3 +403,19 @@ class PopupProcura(Popup):
                        for i in range(len(dic['ep']))]
         except (Exception, AttributeError) as exception:
             print(link, exception)
+
+    def _pagina_manga(self, nome, link, rv):
+        """."""
+        info = {'titulo': [], 'link': []}
+        r = self._req_link(link)
+        b = bs(r.text, 'html.parser')
+        cap = b.find_all('div', 'row lancamento-linha')
+        for i in cap:
+            info['titulo'].append(i.a.text)
+            info['link'].append(i.a.get("href"))
+        self.dismiss()
+        rv.data = [{'titulo': info['titulo'][i],
+                    'link': info['link'][i],
+                    'tituloBotao': 'Baixar',
+                    'tipo': 'capitulo'}
+                   for i in range(len(info['titulo']))]

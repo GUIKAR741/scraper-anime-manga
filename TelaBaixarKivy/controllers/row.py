@@ -10,11 +10,11 @@ class Row(BoxLayout):
 
     def procurar(self, titulo, link, rv):
         """."""
-        if self.tipo == 'anime':
+        if self.tipo == 'anime' or self.tipo == 'manga':
             pop = PopupProcura()
             pop.open()
-            pop.procura(titulo, link, rv)
-        else:
+            pop.procura(self.tipo, titulo, link, rv)
+        elif self.tipo == 'episodio' or self.tipo == 'capitulo':
             pop = PopupDownload()
             pop.open()
-            pop.baixar(link)
+            pop.baixar(self.tipo, link)

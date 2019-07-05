@@ -1,0 +1,13 @@
+<Row>:
+    tipo: 'anime'
+    titulo: ''
+    tituloBotao: ''
+    link: ''
+    Label:
+        size_hint_x: .8
+        text: root.titulo
+    Button:
+        size_hint_x: .2
+        text: root.tituloBotao
+        on_release:
+            root.procurar(root.titulo, root.link, app.root.current_screen.ids.rv)
