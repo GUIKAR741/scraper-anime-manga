@@ -5,8 +5,7 @@ from operator import itemgetter
 from re import sub, compile
 from threading import Thread, current_thread
 from unicodedata import combining, normalize
-from os import path, getcwd, mkdir
-from multiprocessing.dummy import Pool
+from os import path, getcwd, mkdir, remove
 from queue import Queue
 
 from PIL.Image import open as open_image
@@ -16,8 +15,11 @@ from kivy.properties import Property  # pylint: disable=no-name-in-module
 from kivy.properties import StringProperty  # pylint: disable=no-name-in-module
 from kivy.uix.button import Button
 from kivy.uix.popup import Popup
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
 from requests import RequestException, get, post
 from wget import download
+from ffmpy import FFmpeg
 
 
 class PopupDownload(Popup):
@@ -28,7 +30,7 @@ class PopupDownload(Popup):
     titulo = StringProperty('Iniciando...')
     texto = StringProperty('Procurando Titulo')
     funcao = Property(lambda x: x.dismiss())
-
+    
     def __init__(self, *args, **kwargs):
         """."""
         super().__init__(*args, **kwargs)
@@ -47,6 +49,8 @@ class PopupDownload(Popup):
             self.thr = Thread(target=self._download_video, args=[link])
         elif tipo == 'capitulo':
             self.thr = Thread(target=self._download_capitulo, args=[link])
+        elif tipo == 'video':
+            self.thr = Thread(target=self._download_video_youtube, args=[link])
         self.thr.parar = False
         self.thr.start()
 
@@ -58,6 +62,17 @@ class PopupDownload(Popup):
         self.ids.barra.value = (current/total) * 100
         self.ids.tamanho.text = ('%.2f' % ((total / 1024) / 1024))
         self.ids.baixado.text = ('%.2lf' % ((current / 1024) / 1024))
+
+    def _baixar_video_callback(self, total, recvd, ratio, rate, eta):
+        """."""
+        t = current_thread()
+        if t.parar:
+            exit(0)
+        self.ids.barra.value = (recvd/total) * 100
+        self.ids.tamanho.text = ('%.2f' % ((total / 1024) / 1024))
+        self.ids.baixado.text = ('%.2lf' % ((recvd / 1024) / 1024))
+        self.lvel1.text = ('%.2f' % (rate/1024))
+        self.ltemp1.text = str(int(eta))
 
     def cancelar(self):
         """."""
@@ -123,6 +138,62 @@ class PopupDownload(Popup):
         except (Exception, AttributeError) as exp:
             print(link, exp)
 
+    def _download_video_youtube(self, video):
+        """."""
+        boxVel = BoxLayout()
+        lvel = Label()
+        lvel.text = 'Velocidade: '
+        self.lvel1 = Label()
+        self.lvel1.text = '0'
+        lvel2 = Label()
+        lvel2.text = 'Mbps'
+        boxVel.add_widget(lvel)
+        boxVel.add_widget(self.lvel1)
+        boxVel.add_widget(lvel2)
+        self.ids.down.add_widget(boxVel)
+        boxTemp = BoxLayout()
+        ltemp = Label()
+        ltemp.text = 'Tempo Restante: '
+        self.ltemp1 = Label()
+        self.ltemp1.text = '0'
+        ltemp2 = Label()
+        ltemp2.text = 'Segundos'
+        boxTemp.add_widget(ltemp)
+        boxTemp.add_widget(self.ltemp1)
+        boxTemp.add_widget(ltemp2)
+        self.ids.down.add_widget(boxTemp)
+
+        vInfo = video[0]
+        vDown = video[1]
+        arquivo = vInfo.title+"."+vDown.extension
+        self.titulo = "Baixando..."
+        self.texto = vInfo.title[:50]
+        if video[2].active:
+            vDown.download(filepath=arquivo, quiet=True,
+                           callback=self._baixar_video_callback)
+            if vDown.mediatype == 'audio':
+                self.titulo = "Convertendo..."
+                FFmpeg(global_options=['-v quiet'], inputs={arquivo: None},
+                       outputs={vInfo.title + '.mp3': None}).run()
+                remove(arquivo)
+        else:
+            vDown = vInfo.getbestaudio()
+            arquivo = vInfo.title+"."+vDown.extension
+            vDown.download(filepath=arquivo, quiet=True,
+                           callback=self._baixar_video_callback)
+            self.titulo = "Convertendo..."
+            FFmpeg(global_options=['-v quiet'], inputs={arquivo: None},
+                   outputs={vInfo.title + '.mp3': None}).run()
+            remove(arquivo)
+        self.titulo = "Download Concluido!"
+        btn = Button()
+        btn.size_hint_y = None
+        btn.height = dp(50)
+        btn.text = self.textoBotao
+        btn.on_press = lambda: self.funcao(self)
+        self.ids.box.remove_widget(self.ids.cancelar)
+        self.ids.box.add_widget(btn)
+
     def _download_capitulo(self, url):
         """."""
         self.ids.box.remove_widget(self.ids.cancelar)
@@ -144,11 +215,11 @@ class PopupDownload(Popup):
                 imagens.remove(node)
         self.titulo = "Baixando..."
         self.ids.baixado.text = "00/" + str(len(imagens))
-        p = Pool(10)
         self.i = 1
         self.total = str(len(imagens))
-        p = p.map_async(lambda x: self.baixarimg(*x), [
-            [
+        self.q = Queue()
+        [
+            self.q.put([
                 pasta,
                 '0'+str(i+1) if len(str(i+1)) < 2 else i+1,
                 str(imagens[i].get('src')
@@ -159,9 +230,27 @@ class PopupDownload(Popup):
                 if "http:" in imagens[i].get("src") or
                 "https:" in imagens[i].get("src")
                 else 'http:' + imagens[i].get("src")
-            ] for i in range(len(imagens))
-        ])
-        p.wait()
+            ]) for i in range(len(imagens))
+        ]
+
+        p = [Thread(target=self.baixarimg) for i in range(5)]
+        [i.start() for i in p]
+        [i.join() for i in p]
+        # p = p.map_async(lambda x: self.baixarimg(*x), [
+        #     [
+        #         pasta,
+        #         '0'+str(i+1) if len(str(i+1)) < 2 else i+1,
+        #         str(imagens[i].get('src')
+        #             if "http:" in imagens[i].get("src") or
+        #             "https:" in imagens[i].get("src")
+        #             else 'http:' + imagens[i].get("src")).split("."),
+        #         imagens[i].get('src')
+        #         if "http:" in imagens[i].get("src") or
+        #         "https:" in imagens[i].get("src")
+        #         else 'http:' + imagens[i].get("src")
+        #     ] for i in range(len(imagens))
+        # ])
+        # p.wait()
         self.titulo = "Download Concluido!"
         btn = Button()
         btn.size_hint_y = None
@@ -175,16 +264,21 @@ class PopupDownload(Popup):
         if not path.isdir(pasta):
             mkdir(pasta)
 
-    def baixarimg(self, pasta, i, n, url_img):
+    def baixarimg(self):
         """."""
-        rr = self._req_link(str(url_img))
-        with open(pasta + "/" + str(i) + "." + n[n.__len__() - 1], 'wb') as code:
-            code.write(rr.content)
-        open_image(pasta + "/" + str(i) + "." + n[n.__len__() - 1]).save(
-            pasta + "/" + str(i) + "." + n[n.__len__() - 1])
-        self.ids.baixado.text = str(self.i) + "/" + self.total
-        self.ids.barra.value = self.i/self.total * 100
-        self.i += 1
+        while not self.q.empty():
+            pasta, i, n, url_img = self.q.get()
+            rr = self._req_link(str(url_img))
+            with open(pasta + "/" + str(i) + "." + n[n.__len__() - 1], 'wb') as code:
+                code.write(rr.content)
+            open_image(pasta + "/" + str(i) + "." + n[n.__len__() - 1]).save(
+                pasta + "/" + str(i) + "." + n[n.__len__() - 1])
+            self.ids.baixado.text = str('0'+str(self.i) if
+                                        len(str(self.i)) < 2 else
+                                        self.i) + \
+                "/" + self.total
+            self.ids.barra.value = self.i/int(self.total) * 100
+            self.i += 1
 
 
 class PopupProcura(Popup):

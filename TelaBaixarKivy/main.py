@@ -4,6 +4,7 @@ from kivy.app import App
 from controllers.downloader import Downloader  # pylint: disable=unused-import
 from controllers.animes import Animes  # pylint: disable=unused-import
 from controllers.mangas import Mangas  # pylint: disable=unused-import
+from controllers.youtube import YouTube  # pylint: disable=unused-import
 from controllers.gerenciadordetelas import GerenciadorDeTelas  # pylint: disable=unused-import
 from controllers.row import Row  # pylint: disable=unused-import
 

@@ -1,0 +1,89 @@
+<YouTube>:
+    BoxLayout:
+        padding: '2dp'
+        orientation: 'vertical'
+        BoxLayout:
+            size_hint_y: .05
+            Label:
+                size_hint_x: .2
+                text: 'URL do Video/Playlist:'
+            TextInput:
+                id: texto
+                multiline: False
+                size_hint_x: .6
+            Button:
+                id: buscar
+                size_hint_x: .2
+                text: 'Buscar'
+                on_release: 
+                    root.buscar()
+        BoxLayout:
+            size_hint_y: .1
+            Label:
+                height: '20dp'
+                text: "Tipo da URL:"
+            CheckBox:
+                id: videoV
+                height: '20dp'
+                group: "url"
+                active: True
+                allow_no_selection: False
+            Label:
+                height: '20dp'
+                text: 'Video'
+            CheckBox:
+                id: playlistV
+                height: '20dp'
+                group: "url"
+                allow_no_selection: False
+            Label:
+                height: '20dp'
+                text: 'Playlist'
+        BoxLayout:
+            size_hint_y: .1
+            Label:
+                height: '20dp'
+                text: "Tipo da Saida:"
+            CheckBox:
+                id: videoS
+                height: '20dp'
+                group: "saida"
+                active: True
+                allow_no_selection: False
+            Label:
+                height: '20dp'
+                text: 'Video'
+            CheckBox:
+                id: audioS
+                height: '20dp'
+                group: "saida"
+                allow_no_selection: False
+            Label:
+                height: '20dp'
+                text: 'Audio'
+        BoxLayout:
+            size_hint_y: .1
+            Label:
+                text: root.info
+                halign: 'center'
+        RecycleView:
+            id: rv
+            size_hint_y: .65
+            scroll_type: ['bars', 'content']
+            scroll_wheel_distance: dp(114)
+            bar_width: dp(10)
+            viewclass: 'Row'
+            RecycleBoxLayout:
+                default_size: None, dp(56)
+                default_size_hint: 1, None
+                size_hint_y: None
+                height: self.minimum_height
+                orientation: 'vertical'
+                spacing: dp(2)
+        BoxLayout:
+            size_hint_y: .1
+            Button:
+                id: voltar
+                text: 'Voltar'
+                on_release:
+                    app.root.current='downloader'

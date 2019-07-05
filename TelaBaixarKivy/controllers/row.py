@@ -3,10 +3,13 @@ from kivy.uix.boxlayout import BoxLayout
 
 from .popup import (PopupDownload,  # pylint: disable=relative-beyond-top-level
                     PopupProcura)
+from kivy.properties import ObjectProperty  # pylint: disable=no-name-in-module
 
 
 class Row(BoxLayout):
     """."""
+
+    video = ObjectProperty()
 
     def procurar(self, titulo, link, rv):
         """."""
@@ -18,3 +21,7 @@ class Row(BoxLayout):
             pop = PopupDownload()
             pop.open()
             pop.baixar(self.tipo, link)
+        elif self.tipo == 'video':
+            pop = PopupDownload()
+            pop.open()
+            pop.baixar(self.tipo, self.video)

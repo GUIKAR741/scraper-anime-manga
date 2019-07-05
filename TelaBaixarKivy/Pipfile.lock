@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "2f09d33d03f84086461b1740aca93a9ab380a56de56197bd00c4f22ef1e113b2"
+            "sha256": "845ad2e9e8ca79d4ed2a492a3756879aea2214ed5a995c972377fd7ab7ffe130"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -88,6 +88,13 @@
             "index": "pypi",
             "version": "==0.14"
         },
+        "ffmpy": {
+            "hashes": [
+                "sha256:65abdddfa2561bb86b6c9ecfced53c7a15ea5080db4ddad08da7de5a348929f1"
+            ],
+            "index": "pypi",
+            "version": "==0.2.2"
+        },
         "idna": {
             "hashes": [
                 "sha256:c357b3f628cf53ae2c4c05627ecc484553142ca23264e593d327bcde5e9c3407",
@@ -122,6 +129,14 @@
                 "sha256:c256f42788421273a08fbb0a228f0fb0e80dd86b629fb8c0920507f645be6c72"
             ],
             "version": "==0.1.4"
+        },
+        "pafy": {
+            "hashes": [
+                "sha256:c6506070065829a0419276fc6a2649a5d35e77efdc91b792c2db8576d8b779d9",
+                "sha256:e842dc589a339a870b5869cc3802f2e95824edf347f65128223cd5ebdff21024"
+            ],
+            "index": "pypi",
+            "version": "==0.5.4"
         },
         "pillow": {
             "hashes": [
@@ -191,6 +206,14 @@
             ],
             "index": "pypi",
             "version": "==3.2"
+        },
+        "youtube-dl": {
+            "hashes": [
+                "sha256:36da83abcde378d4de838d55d25b90c4a3ca37843efa20007898646df14b5575",
+                "sha256:829fc833d8cc4a24c883fa49fd450d06b29fb17cddcb885314af92da220234f1"
+            ],
+            "index": "pypi",
+            "version": "==2019.7.2"
         }
     },
     "develop": {

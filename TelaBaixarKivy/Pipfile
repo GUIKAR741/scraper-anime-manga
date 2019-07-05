@@ -18,6 +18,9 @@ wget = "*"
 requests = "*"
 bs4 = "*"
 pillow = "*"
+pafy = "*"
+youtube-dl = "*"
+ffmpy = "*"
 
 [requires]
 python_version = "3.7"

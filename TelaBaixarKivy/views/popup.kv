@@ -1,5 +1,5 @@
 <PopupDownload>:
-    size_hint: .5, .5
+    size_hint: .5, .6
     auto_dismiss: False
     title: root.titulo
     BoxLayout:
@@ -11,27 +11,30 @@
             Label:
                 text: root.texto
             BoxLayout:
-                orientation: 'horizontal'
-                Label:
-                    id: textoTamanho
-                    text: "Tamanho:"
-                Label:
-                    id: tamanho
-                    text: "0"
-                Label:
-                    id: mb
-                    text: "MB"
-            BoxLayout:
-                orientation: 'horizontal'
-                Label:
-                    text: textoBaixado
-                    text: "Baixado:"
-                Label:
-                    id: baixado
-                    text: "0"
-                Label:
-                    id: mbps
-                    text: "Mbps"
+                orientation: 'vertical'
+                id: down
+                BoxLayout:
+                    orientation: 'horizontal'
+                    Label:
+                        id: textoTamanho
+                        text: "Tamanho:"
+                    Label:
+                        id: tamanho
+                        text: "0"
+                    Label:
+                        id: mb
+                        text: "MB"
+                BoxLayout:
+                    orientation: 'horizontal'
+                    Label:
+                        text: textoBaixado
+                        text: "Baixado:"
+                    Label:
+                        id: baixado
+                        text: "0"
+                    Label:
+                        id: mbps
+                        text: "Mbps"
             BoxLayout:
                 orientation: 'horizontal'
                 ProgressBar:
