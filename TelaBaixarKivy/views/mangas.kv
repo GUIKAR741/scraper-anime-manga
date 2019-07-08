@@ -14,9 +14,23 @@
                 size_hint_x: .2
                 text: 'Buscar'
                 on_release: root.procurar()
+        BoxLayout:
+            size_hint_y: .05
+            Label:
+                size_hint_x: .1
+                text: 'Renomear:'
+            Button:
+                size_hint_x: .3
+                text: 'Normal'
+            Button:
+                size_hint_x: .3
+                text: 'Celular'
+            Button:
+                size_hint_x: .3
+                text: 'Re-Criar'
         RecycleView:
             id: rv
-            size_hint_y: .87
+            size_hint_y: .83
             scroll_type: ['bars', 'content']
             scroll_wheel_distance: dp(114)
             bar_width: dp(10)
