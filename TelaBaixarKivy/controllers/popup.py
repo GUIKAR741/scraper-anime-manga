@@ -2,24 +2,25 @@
 from io import StringIO
 from json import dump, loads
 from operator import itemgetter
-from re import sub, compile
+from os import environ, mkdir, path, remove
+from queue import Queue
+from re import compile, sub
 from threading import Thread, current_thread
 from unicodedata import combining, normalize
-from os import path, getcwd, mkdir, remove
-from queue import Queue
 
-from PIL.Image import open as open_image
 from bs4 import BeautifulSoup as bs
+from ffmpy import FFmpeg
+from kivy.app import App
 from kivy.metrics import dp
 from kivy.properties import Property  # pylint: disable=no-name-in-module
 from kivy.properties import StringProperty  # pylint: disable=no-name-in-module
-from kivy.uix.button import Button
-from kivy.uix.popup import Popup
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
 from kivy.uix.label import Label
+from kivy.uix.popup import Popup
+from PIL.Image import open as open_image
 from requests import RequestException, get, post
 from wget import download
-from ffmpy import FFmpeg
 
 
 class PopupDownload(Popup):
@@ -30,10 +31,11 @@ class PopupDownload(Popup):
     titulo = StringProperty('Iniciando...')
     texto = StringProperty('Procurando Titulo')
     funcao = Property(lambda x: x.dismiss())
-    
+
     def __init__(self, *args, **kwargs):
         """."""
         super().__init__(*args, **kwargs)
+        self.pathDown = path.join(environ['HOME'], "Downloads").replace('\\', '/')
 
     def _sanitizestring(self, palavra):
         """."""
@@ -111,7 +113,8 @@ class PopupDownload(Popup):
                     'src') else "https:"+bb.get('src')
                 r = get(ll, allow_redirects=False, headers=headers)
                 self.titulo = "Baixando..."
-                download(r.headers['location'], nome, bar=self._baixar_callback)
+                download(self.pathDown + "/" + r.headers['location'], nome,
+                         bar=self._baixar_callback)
             else:
                 bb = b.find('a', title="Baixar Video")
                 if bb:
@@ -126,7 +129,8 @@ class PopupDownload(Popup):
                                 ('http' or 'https') in bb.get('href') else
                                 "https:" + bb.get('href'), headers)
                         self.titulo = "Baixando..."
-                        download(head, nome, bar=self._baixar_callback)
+                        download(self.pathDown + "/" + head,
+                                 nome, bar=self._baixar_callback)
             self.titulo = "Download Concluido!"
             btn = Button()
             btn.size_hint_y = None
@@ -165,7 +169,7 @@ class PopupDownload(Popup):
 
         vInfo = video[0]
         vDown = video[1]
-        arquivo = vInfo.title+"."+vDown.extension
+        arquivo = self.pathDown + "/" + vInfo.title+"."+vDown.extension
         self.titulo = "Baixando..."
         self.texto = vInfo.title[:50]
         if video[2].active:
@@ -174,7 +178,7 @@ class PopupDownload(Popup):
             if vDown.mediatype == 'audio':
                 self.titulo = "Convertendo..."
                 FFmpeg(global_options=['-v quiet'], inputs={arquivo: None},
-                       outputs={vInfo.title + '.mp3': None}).run()
+                       outputs={self.pathDown + "/" + vInfo.title + '.mp3': None}).run()
                 remove(arquivo)
         else:
             vDown = vInfo.getbestaudio()
@@ -183,7 +187,7 @@ class PopupDownload(Popup):
                            callback=self._baixar_video_callback)
             self.titulo = "Convertendo..."
             FFmpeg(global_options=['-v quiet'], inputs={arquivo: None},
-                   outputs={vInfo.title + '.mp3': None}).run()
+                   outputs={self.pathDown + "/" + vInfo.title + '.mp3': None}).run()
             remove(arquivo)
         self.titulo = "Download Concluido!"
         btn = Button()
@@ -201,7 +205,7 @@ class PopupDownload(Popup):
         self.ids.textoTamanho.text = ''
         self.ids.mb.text = ''
         self.ids.mbps.text = 'Paginas'
-        caminho = getcwd()
+        caminho = self.pathDown
         urls = url.split('/')
         st = self._sanitizestring(str(urls[urls.__len__() - 2]))
         pasta = caminho + '/' + st + "_" + urls[urls.__len__() - 1]
@@ -293,6 +297,7 @@ class PopupProcura(Popup):
     def __init__(self, *args, **kwargs):
         """."""
         super().__init__(*args, **kwargs)
+        self.path = App.get_running_app().user_data_dir+'/'
         self.base = "https://www.superanimes.site/"
 
     def _req_link(self, u, dados={}):
@@ -375,7 +380,7 @@ class PopupProcura(Popup):
         io = StringIO()
         dump(ani, io)
         json_s = io.getvalue()
-        arq = open("res/PaginasAnimes.json", 'w')
+        arq = open(self.path+"PaginasAnimes.json", 'w')
         arq.write(json_s)
         arq.close()
         self.dismiss()
@@ -414,7 +419,7 @@ class PopupProcura(Popup):
         io = StringIO()
         dump(dic, io)
         json_s = io.getvalue()
-        arq = open("res/PaginasMangas.json", 'w')
+        arq = open(self.path + "PaginasMangas.json", 'w')
         arq.write(json_s)
         arq.close()
 

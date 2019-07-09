@@ -1,9 +1,9 @@
 """."""
+from kivy.properties import ObjectProperty  # pylint: disable=no-name-in-module
 from kivy.uix.boxlayout import BoxLayout
 
-from .popup import (PopupDownload,  # pylint: disable=relative-beyond-top-level
-                    PopupProcura)
-from kivy.properties import ObjectProperty  # pylint: disable=no-name-in-module
+from .popup import PopupDownload  # pylint: disable=relative-beyond-top-level
+from .popup import PopupProcura  # pylint: disable=relative-beyond-top-level
 
 
 class Row(BoxLayout):

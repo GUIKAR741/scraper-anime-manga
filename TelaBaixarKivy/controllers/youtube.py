@@ -1,9 +1,11 @@
 """."""
-from .telaBase import Tela  # pylint: disable=relative-beyond-top-level
+from threading import Thread
+
 import pafy
 from kivy.properties import StringProperty  # pylint: disable=no-name-in-module
+
 from .popup import PopupProcura  # pylint: disable=relative-beyond-top-level
-from threading import Thread
+from .telaBase import Tela  # pylint: disable=relative-beyond-top-level
 
 
 class YouTube(Tela):

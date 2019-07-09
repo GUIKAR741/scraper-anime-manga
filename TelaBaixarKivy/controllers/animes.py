@@ -2,6 +2,8 @@
 from json import dump, load, loads  # pylint: disable=unused-import
 from os import path
 
+from kivy.app import App
+
 from .popup import PopupProcura  # pylint: disable=relative-beyond-top-level
 from .telaBase import Tela  # pylint: disable=relative-beyond-top-level
 
@@ -12,6 +14,7 @@ class Animes(Tela):
     def on_enter(self, *args, **kwargs):
         """."""
         super().on_enter(*args, **kwargs)
+        self.path = App.get_running_app().user_data_dir+'/'
         self._atualizar_lista()
         self.ids.texto.text = ''
         self.ids.texto.disable = False
@@ -47,8 +50,8 @@ class Animes(Tela):
 
     def _atualizar_lista(self):
         """."""
-        if path.isfile("res/PaginasAnimes.json"):
-            self.animes = load(open("res/PaginasAnimes.json"))
+        if path.isfile(self.path+"PaginasAnimes.json"):
+            self.animes = load(open(self.path+"PaginasAnimes.json"))
             self.ids.rv.data = [{'titulo': self.animes['nome'][i],
                                  'link': self.animes['link'][i],
                                  'tituloBotao': 'Ver Episodios',

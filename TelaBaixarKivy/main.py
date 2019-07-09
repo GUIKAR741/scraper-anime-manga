@@ -1,23 +1,40 @@
 """."""
 import kivy
 from kivy.app import App
-from controllers.downloader import Downloader  # pylint: disable=unused-import
+from kivy.lang.builder import Builder
+
 from controllers.animes import Animes  # pylint: disable=unused-import
+from controllers.downloader import Downloader  # pylint: disable=unused-import
+from controllers.gerenciadordetelas import (  # pylint: disable=unused-import
+    GerenciadorDeTelas
+)
 from controllers.mangas import Mangas  # pylint: disable=unused-import
-from controllers.youtube import YouTube  # pylint: disable=unused-import
-from controllers.gerenciadordetelas import GerenciadorDeTelas  # pylint: disable=unused-import
 from controllers.row import Row  # pylint: disable=unused-import
+from controllers.youtube import YouTube  # pylint: disable=unused-import
+
+# from kivy.uix.recycleview import RecycleView
 
 kivy.require("1.11.0")
 
 
-class Main(App):
+class DownloaderApp(App):
     """Classe Principal do Aplicativo."""
 
     def build(self):
         """Construção do Aplicativo."""
         self.title = "Downloader"
-        super().build()
+        self.icon = "res/download.png"
+        return Builder.load_string(
+            "#: include views/popup.kv\n"
+            "#: include views/downloader.kv\n"
+            "#: include views/row.kv\n"
+            "#: include views/animes.kv\n"
+            "#: include views/youtube.kv\n"
+            "#: include views/mangas.kv\n"
+            "#: include views/gerenciadordetelas.kv\n"
+            "GerenciadorDeTelas:"
+            )
 
 
-Main().run()
+if __name__ == "__main__":
+    DownloaderApp().run()
