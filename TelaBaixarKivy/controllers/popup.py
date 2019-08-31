@@ -2,7 +2,7 @@
 from io import StringIO
 from json import dump, loads
 from operator import itemgetter
-from os import environ, mkdir, path, remove
+from os import path, mkdir, remove
 from queue import Queue
 from re import compile, sub
 from threading import Thread, current_thread
@@ -35,7 +35,7 @@ class PopupDownload(Popup):
     def __init__(self, *args, **kwargs):
         """."""
         super().__init__(*args, **kwargs)
-        self.pathDown = path.join(environ['HOME'], "Downloads").replace('\\', '/')
+        self.pathDown = App.get_running_app().pathDown
 
     def _sanitizestring(self, palavra):
         """."""
@@ -113,7 +113,8 @@ class PopupDownload(Popup):
                     'src') else "https:"+bb.get('src')
                 r = get(ll, allow_redirects=False, headers=headers)
                 self.titulo = "Baixando..."
-                download(self.pathDown + "/" + r.headers['location'], nome,
+                download(r.headers['location'],
+                         self.pathDown + "/" + nome,
                          bar=self._baixar_callback)
             else:
                 bb = b.find('a', title="Baixar Video")
@@ -129,8 +130,9 @@ class PopupDownload(Popup):
                                 ('http' or 'https') in bb.get('href') else
                                 "https:" + bb.get('href'), headers)
                         self.titulo = "Baixando..."
-                        download(self.pathDown + "/" + head,
-                                 nome, bar=self._baixar_callback)
+                        download(head,
+                                 self.pathDown + "/" + nome,
+                                 bar=self._baixar_callback)
             self.titulo = "Download Concluido!"
             btn = Button()
             btn.size_hint_y = None
@@ -169,25 +171,34 @@ class PopupDownload(Popup):
 
         vInfo = video[0]
         vDown = video[1]
-        arquivo = self.pathDown + "/" + vInfo.title+"."+vDown.extension
+        arquivo = self.pathDown + "/" +\
+            self._sanitizestring(vInfo.title) + "." +\
+            vDown.extension
         self.titulo = "Baixando..."
         self.texto = vInfo.title[:50]
         if video[2].active:
             vDown.download(filepath=arquivo, quiet=True,
                            callback=self._baixar_video_callback)
             if vDown.mediatype == 'audio':
+                self.ids.box.remove_widget(self.ids.cancelar)
                 self.titulo = "Convertendo..."
                 FFmpeg(global_options=['-v quiet'], inputs={arquivo: None},
-                       outputs={self.pathDown + "/" + vInfo.title + '.mp3': None}).run()
+                       outputs={self.pathDown + "/" +
+                                self._sanitizestring(vInfo.title) +
+                                '.mp3': None}).run()
                 remove(arquivo)
         else:
             vDown = vInfo.getbestaudio()
-            arquivo = vInfo.title+"."+vDown.extension
+            arquivo = self.pathDown + "/" + \
+                self._sanitizestring(vInfo.title) + "."+vDown.extension
             vDown.download(filepath=arquivo, quiet=True,
                            callback=self._baixar_video_callback)
+            self.ids.box.remove_widget(self.ids.cancelar)
             self.titulo = "Convertendo..."
             FFmpeg(global_options=['-v quiet'], inputs={arquivo: None},
-                   outputs={self.pathDown + "/" + vInfo.title + '.mp3': None}).run()
+                   outputs={self.pathDown + "/" +
+                            self._sanitizestring(vInfo.title) +
+                            '.mp3': None}).run()
             remove(arquivo)
         self.titulo = "Download Concluido!"
         btn = Button()
@@ -195,7 +206,6 @@ class PopupDownload(Popup):
         btn.height = dp(50)
         btn.text = self.textoBotao
         btn.on_press = lambda: self.funcao(self)
-        self.ids.box.remove_widget(self.ids.cancelar)
         self.ids.box.add_widget(btn)
 
     def _download_capitulo(self, url):
@@ -212,7 +222,7 @@ class PopupDownload(Popup):
         bb = bs(self._req_link(url).content, 'html.parser')
         self.criapasta(pasta)
         i = 1
-        self.texto = url
+        self.texto = st + "_" + urls[urls.__len__() - 1]
         imagens = bb.find_all('img', pag=True)
         for node in imagens:
             if str(node.get("src")).find("leitor") == -1:
@@ -518,3 +528,29 @@ class PopupProcura(Popup):
                     'tituloBotao': 'Baixar',
                     'tipo': 'capitulo'}
                    for i in range(len(info['titulo']))]
+
+
+class PopupFile(Popup):
+    """Componente Popup."""
+
+    textoBotao = StringProperty('Fechar')
+    textoBotaoSel = StringProperty('Selecionar')
+
+    titulo = StringProperty('Procurar:')
+    funcao = Property(lambda x: x.dismiss())
+
+    path = StringProperty('')
+
+    def __init__(self, *args, **kwargs):
+        """."""
+        super().__init__(*args, **kwargs)
+        self.path = App.get_running_app().pathDown
+
+    def _att_down(self, func):
+        self.func = func
+
+    def selecionar(self):
+        """."""
+        App.get_running_app().pathDown = self.ids.fc.path
+        self.func(self.ids.fc.path)
+        self.dismiss()

@@ -1,25 +1,75 @@
 <Downloader>:
     BoxLayout:
         orientation: 'vertical'
+        canvas.before:
+            Color:
+                rgba:1,1,1,1
+            Rectangle:
+                size:self.size
+                pos:self.pos
         BoxLayout:
+            size_hint_y: .1
             Label:
-                text: "Animes"
+                size_hint_x: .2
+                color: 0,0,0,1
+                text: 'Local para Salvar:'
+            TextInput:
+                id: texto
+                text: root.path
+                readonly: True
+                size_hint_x: .6
             Button:
-                text: "Baixar"
-                on_release: 
-                    app.root.current = 'animes'
+                id: buscar
+                size_hint_x: .2
+                text: 'Procurar'
+                on_release: root.procurar()
         BoxLayout:
-            Label:
-                text: "Mangás"
-            Button:
-                text: "Baixar"
-                on_release:
-                    app.root.current = 'mangas'
+            BoxLayout:
+                orientation: 'vertical'
+                BoxLayout:
+                    size_hint_y: .8
+                    orientation: 'vertical'
+                    Label:
+                        Image:
+                            center: self.parent.center
+                            source: 'res/superanimes.png' 
+                BoxLayout:
+                    size_hint_y: .2
+                    orientation: 'vertical'
+                    Button:
+                        text: "Baixar"
+                        on_release: 
+                            app.root.current = 'animes'
+            BoxLayout:
+                orientation: 'vertical'
+                BoxLayout:
+                    size_hint_y: .8
+                    orientation: 'vertical'
+                    Label:
+                        Image:
+                            center: self.parent.center
+                            source: 'res/union.png' 
+                BoxLayout:
+                    size_hint_y: .2
+                    orientation: 'vertical'
+                    Button:
+                        text: "Baixar"
+                        on_release:
+                            app.root.current = 'mangas'
         BoxLayout:
-            Label:
-                text: "YouTube"
-            Button:
-                text: "Baixar"
-                on_release:
-                    app.root.current = 'youtube'
+            orientation: 'vertical'
+            BoxLayout:
+                size_hint_y: .8
+                orientation: 'vertical'
+                Label:
+                    Image:
+                        center: self.parent.center
+                        source: 'res/youtube.png' 
+            BoxLayout:
+                size_hint_y: .2
+                orientation: 'vertical'
+                Button:
+                    text: "Baixar"
+                    on_release:
+                        app.root.current = 'youtube'
 

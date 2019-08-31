@@ -32,7 +32,9 @@ class Animes(Tela):
             for i in range(len(self.animes['nome'])):
                 if busca in self.animes['nome'][i].lower():
                     retorno.append({'titulo': self.animes['nome'][i],
-                                    'link': self.animes['link'][i]})
+                                    'link': self.animes['link'][i],
+                                    'tituloBotao': 'Ver Episodios',
+                                    'tipo': 'anime'})
             self.ids.rv.data = retorno
             self.ids.texto.text = ''
             self.ids.buscar.text = 'Resetar'

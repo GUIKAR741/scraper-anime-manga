@@ -17,11 +17,11 @@ pygments = "*"
 docutils = "*"
 wget = "*"
 requests = "*"
-bs4 = "*"
 pillow = "*"
 pafy = "*"
 youtube-dl = "*"
 ffmpy = "*"
+beautifulsoup4 = "*"
 
 [requires]
 python_version = "3.7"

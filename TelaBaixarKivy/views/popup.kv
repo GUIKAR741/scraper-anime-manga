@@ -78,3 +78,31 @@
                 ProgressBar:
                     id: barra
                     height: '48dp'
+
+<PopupFile>:
+    size_hint: .6, .7
+    auto_dismiss: False
+    title: root.titulo
+    BoxLayout:
+        id: box
+        orientation: 'vertical'
+        BoxLayout:
+            size_hint_y: .9
+            FileChooserIconView:
+                id: fc
+                show_hidden: False
+                path: root.path
+        BoxLayout:
+            size_hint_y: .1
+            Button:
+                id: cancelar
+                size_hint_y: None
+                height: '35dp'
+                text: root.textoBotao
+                on_release: root.funcao(root)
+            Button:
+                id: selecionar
+                size_hint_y: None
+                height: '35dp'
+                text: root.textoBotaoSel
+                on_release: root.selecionar()

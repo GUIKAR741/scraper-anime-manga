@@ -11,8 +11,8 @@ from controllers.gerenciadordetelas import (  # pylint: disable=unused-import
 from controllers.mangas import Mangas  # pylint: disable=unused-import
 from controllers.row import Row  # pylint: disable=unused-import
 from controllers.youtube import YouTube  # pylint: disable=unused-import
+from os import path, environ, mkdir
 
-# from kivy.uix.recycleview import RecycleView
 
 kivy.require("1.11.0")
 
@@ -37,4 +37,9 @@ class DownloaderApp(App):
 
 
 if __name__ == "__main__":
-    DownloaderApp().run()
+    app = DownloaderApp()
+    app.pathDown = path.join(path.join(environ['HOME'], "Downloads"), 'Downloader')\
+                       .replace('\\', '/')
+    if not path.isdir(app.pathDown):
+        mkdir(app.pathDown)
+    app.run()
